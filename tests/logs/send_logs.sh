@@ -31,4 +31,4 @@ echo "Sending gzip logs with gzip header"
 curl -i -XPOST -H 'Content-Encoding: gzip' -H "user-id: $USER_ID" 'http://localhost:8080/api/v1/logs/elasticsearch/bulk' -T ${LOG_FILE}.gz
 echo
 
-#rm $LOG_FILE ${LOG_FILE}.gz
+rm $LOG_FILE ${LOG_FILE}.gz

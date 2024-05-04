@@ -9,23 +9,33 @@ import (
 	"observability-agent/logger"
 )
 
+// VMAgentClient
+// Клиент для работы с victoriametrics agent
 type VMAgentClient struct {
 	url string
 	log logger.Logger
 }
 
+// Ping
+// Проверка соединения
 func (c *VMAgentClient) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Close
+// Закрытие соединения
 func (c *VMAgentClient) Close(ctx context.Context) error {
 	return nil
 }
 
+// Prepare
+// Подготовка к работе
 func (c *VMAgentClient) Prepare(ctx context.Context) error {
 	return nil
 }
 
+// Save
+// Сохранение логов в хранилище
 func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) error {
 
 	// TODO timeout
@@ -40,8 +50,6 @@ func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) 
 		request.Header.Set("Content-Encoding", "gzip")
 	}
 
-	//c.log.Debugf("Sending following body:\n%v", string(metrics.Data))
-
 	response, err := client.Do(request)
 	if err != nil {
 		return err
@@ -54,6 +62,8 @@ func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) 
 	return nil
 }
 
+// NewClient
+// Конструктор для VMAgentClient
 func NewClient(url string, extraLabels []string, log logger.Logger) (*VMAgentClient, error) {
 	if url == "" {
 		return nil, fmt.Errorf("url is empty")

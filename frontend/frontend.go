@@ -9,16 +9,22 @@ import (
 	"observability-agent/logger"
 )
 
+// Frontend
+// Интерфейс для реализации фронтенда
 type Frontend interface {
 	Start() error
 }
 
+// HTTPFrontend
+// Реализация HTTP фронтенда
 type HTTPFrontend struct {
 	log    logger.Logger
 	agent  *core.Agent
 	config *config.Config
 }
 
+// Start
+// Запуск фронтенда
 func (f *HTTPFrontend) Start() error {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
@@ -31,6 +37,8 @@ func (f *HTTPFrontend) Start() error {
 	return http.ListenAndServe(":8080", r)
 }
 
+// NewHTTP
+// Конструктор HTTPFrontend
 func NewHTTP(agent *core.Agent, log logger.Logger, cfg *config.Config) (Frontend, error) {
 	var front Frontend
 	front = &HTTPFrontend{

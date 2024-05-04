@@ -2,6 +2,8 @@ package logger
 
 import "github.com/sirupsen/logrus"
 
+// Logger
+// Интерфейс для работы с логгерами
 type Logger interface {
 	Debug(args ...interface{})
 	Info(args ...interface{})
@@ -15,6 +17,8 @@ type Logger interface {
 	Fatalf(format string, args ...interface{})
 }
 
+// New
+// Конструктор нового логгера
 func New(logLevelString string) (Logger, error) {
 	var logger Logger
 
@@ -31,6 +35,8 @@ func New(logLevelString string) (Logger, error) {
 	return logger, nil
 }
 
+// LogrusLogger
+// Логгер использующий библиотеку logrus
 type LogrusLogger struct {
 	log *logrus.Logger
 }

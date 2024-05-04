@@ -88,27 +88,27 @@ func NewElasticSearchClient(ctx context.Context, addresses []string, username, p
 }
 
 // Ping
-// Проверка соединения с ElasticSearch
+// Проверка соединения
 func (c *ElasticSearchClient) Ping(ctx context.Context) error {
 	_, err := c.client.Ping()
 	return err
 }
 
 // Close
-// Закрытие соединения с ElasticSearch
+// Закрытие соединения
 func (c *ElasticSearchClient) Close(ctx context.Context) error {
 	return nil
 }
 
 // Prepare
-// Подготовка к работе с ElasticSearch
+// Подготовка к работе
 func (c *ElasticSearchClient) Prepare(ctx context.Context) error {
 	_, err := c.client.Indices.Create(c.indexName)
 	return err
 }
 
 // Save
-// Сохранение логов в ElasticSearch
+// Сохранение логов в хранилище
 func (c *ElasticSearchClient) Save(ctx context.Context, request *core.LogsRequest) error {
 	bulkBody, err := c.prepareBulkBody(request)
 	if err != nil {

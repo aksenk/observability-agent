@@ -6,6 +6,8 @@ import (
 	"observability-agent/core"
 )
 
+// metricsReceiverHandler
+// Обработчик запроса на запись метрик
 func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength > f.config.Metrics.MaximumBytesSize {
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
@@ -27,6 +29,8 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// TODO аус
+
 	metrics := &core.MetricsRequest{
 		Data: body,
 	}
@@ -43,5 +47,6 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Write([]byte("Metrics received successfully\n"))
-
+	w.WriteHeader(http.StatusOK)
+	return
 }

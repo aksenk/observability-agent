@@ -25,7 +25,7 @@ type ServerConfig struct {
 type LogsConfig struct {
 	Type             string              `env:"TYPE, default=elasticsearch"`
 	Elastic          ElasticSearchConfig `env:", prefix=ELASTIC_"`
-	MaximumBytesSize int64               `env:"MAXIMUM_BYTES_SIZE, default=5242880"`
+	MaximumBytesSize int64               `env:"MAXIMUM_BYTES_SIZE, default=5242880"` // 5 megabytes
 }
 
 type ElasticSearchConfig struct {
@@ -38,7 +38,7 @@ type ElasticSearchConfig struct {
 type MetricsConfig struct {
 	Type             string                `env:"TYPE, default=victoriametrics"`
 	Victoria         VictoriaMetricsConfig `env:", prefix=VICTORIA_"`
-	MaximumBytesSize int64                 `env:"MAXIMUM_BYTES_SIZE, default=5242880"`
+	MaximumBytesSize int64                 `env:"MAXIMUM_BYTES_SIZE, default=5242880"` // 5 megabytes
 }
 
 type VictoriaMetricsConfig struct {
@@ -47,8 +47,8 @@ type VictoriaMetricsConfig struct {
 }
 
 type AuthConfig struct {
-	Enable bool   `env:"PORT, default=true"`
-	Secret string `env:"SECRET"`
+	AllowUnauthorized bool   `env:"ALLOW_UNAUTHORIZED, default=true"`
+	Secret            string `env:"SECRET"`
 }
 
 func Get(ctx context.Context) (*Config, error) {

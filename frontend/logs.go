@@ -1,14 +1,15 @@
 package frontend
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"observability-agent/core"
-	"strconv"
 )
 
+// logsReceiverHandler
+// Обработчик запроса на получение логов
 func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Request) {
+	// Сразу проверяем что размер запроса не превышает максимально допустимый
 	if r.ContentLength > f.config.Logs.MaximumBytesSize {
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
 		http.Error(w, "Request is too big", http.StatusRequestEntityTooLarge)
@@ -29,9 +30,16 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userID, err := getUserID(r)
+	// Пробуем получить user ID
+	userID, err := f.agent.GetUserID(r.Header.Get("user-id"))
 	if err != nil {
 		f.log.Warnf("Error getting user ID: %v", err)
+	}
+
+	if !f.config.Auth.AllowUnauthorized && userID == 0 {
+		f.log.Warnf("Unauthorized requests is forbidden")
+		http.Error(w, "Unauthorized requests is forbidden", http.StatusForbidden)
+		return
 	}
 
 	request := &core.LogsRequest{
@@ -53,16 +61,4 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 	w.Write([]byte("Logs received successfully\n"))
 	w.WriteHeader(http.StatusOK)
 	return
-}
-
-func getUserID(r *http.Request) (int64, error) {
-	i := r.Header.Get("user-id")
-	if i == "" {
-		return 0, fmt.Errorf("user-id is not found")
-	}
-	userID, err := strconv.ParseInt(i, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("user-id is not a number")
-	}
-	return userID, nil
 }

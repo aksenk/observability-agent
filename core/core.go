@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 )
 
 // LogsStorage
@@ -76,6 +77,7 @@ func (a *Agent) SaveLogs(ctx context.Context, request *LogsRequest) error {
 		return fmt.Errorf("request body is not gzipped but header 'Content-Encoding: gzip' is exist")
 	}
 
+	// Если данные закодированы, то распаковываем их
 	if request.Gzip {
 		var err error
 		request.Data, err = unGzip(request.Data)
@@ -87,9 +89,16 @@ func (a *Agent) SaveLogs(ctx context.Context, request *LogsRequest) error {
 	return a.logsStorage.Save(ctx, request)
 }
 
-//func (a *Agent) CheckJWT(ctx context.Context) error {
-//	return nil
-//}
+func (a *Agent) GetUserID(rawData string) (int64, error) {
+	if rawData == "" {
+		return 0, fmt.Errorf("user-id is not found")
+	}
+	userID, err := strconv.ParseInt(rawData, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("user-id is not a number")
+	}
+	return userID, nil
+}
 
 // isGzipped
 // Проверка данных на сжатие форматом gzip.
