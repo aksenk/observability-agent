@@ -57,7 +57,7 @@ func main() {
 		log.Fatalf("Error init agent: %v", err)
 	}
 
-	front, err := frontend.NewHTTP(agent, log)
+	front, err := frontend.NewHTTP(agent, log, cfg)
 	if err != nil {
 		log.Fatalf("Error init frontend: %v", err)
 	}

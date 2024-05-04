@@ -36,8 +36,9 @@ type ElasticSearchConfig struct {
 }
 
 type MetricsConfig struct {
-	Type     string                `env:"TYPE, default=victoriametrics"`
-	Victoria VictoriaMetricsConfig `env:", prefix=VICTORIA_"`
+	Type             string                `env:"TYPE, default=victoriametrics"`
+	Victoria         VictoriaMetricsConfig `env:", prefix=VICTORIA_"`
+	MaximumBytesSize int64                 `env:"MAXIMUM_BYTES_SIZE, default=5242880"`
 }
 
 type VictoriaMetricsConfig struct {

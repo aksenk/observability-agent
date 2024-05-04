@@ -1,8 +1,11 @@
 package core
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 )
 
 // LogsStorage
@@ -11,7 +14,7 @@ type LogsStorage interface {
 	Ping(ctx context.Context) error
 	Close(ctx context.Context) error
 	Prepare(ctx context.Context) error
-	Save(ctx context.Context, logs *LogsRequest) error
+	Save(ctx context.Context, request *LogsRequest) error
 }
 
 // MetricsStorage
@@ -20,7 +23,7 @@ type MetricsStorage interface {
 	Ping(ctx context.Context) error
 	Close(ctx context.Context) error
 	Prepare(ctx context.Context) error
-	Save(ctx context.Context, metrics *MetricsRequest) error
+	Save(ctx context.Context, request *MetricsRequest) error
 }
 
 // MetricsRequest
@@ -73,6 +76,14 @@ func (a *Agent) SaveLogs(ctx context.Context, request *LogsRequest) error {
 		return fmt.Errorf("request body is not gzipped but header 'Content-Encoding: gzip' is exist")
 	}
 
+	if request.Gzip {
+		var err error
+		request.Data, err = unGzip(request.Data)
+		if err != nil {
+			return fmt.Errorf("error ungzip request body: %w", err)
+		}
+	}
+
 	return a.logsStorage.Save(ctx, request)
 }
 
@@ -85,4 +96,21 @@ func (a *Agent) SaveLogs(ctx context.Context, request *LogsRequest) error {
 func isGzipped(data []byte) bool {
 	// Проверяем, является ли первый байт 0x1f и второй байт 0x8b, что характерно для gzip формата.
 	return len(data) >= 2 && data[0] == 0x1f && data[1] == 0x8b
+}
+
+// unGzip
+// Распаковка данных из gzip формата.
+func unGzip(inputData []byte) ([]byte, error) {
+	gzReader, err := gzip.NewReader(bytes.NewReader(inputData))
+	if err != nil {
+		return nil, err
+	}
+	defer gzReader.Close()
+
+	outputData, err := io.ReadAll(gzReader)
+	if err != nil {
+		return nil, err
+	}
+
+	return outputData, nil
 }

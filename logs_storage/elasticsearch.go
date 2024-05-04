@@ -147,6 +147,8 @@ func (c *ElasticSearchClient) prepareBulkBody(request *core.LogsRequest) (*bytes
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		c.log.Debugf("Processing line: %s", line)
+
 		meta := &ElasticSearchDocumentMetadata{
 			Index: &ElasticSearchDocumentMetadataIndex{
 				Index: &c.indexName,

@@ -7,6 +7,12 @@ import (
 )
 
 func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Request) {
+	if r.ContentLength > f.config.Metrics.MaximumBytesSize {
+		f.log.Warnf("Request with size %d is too big", r.ContentLength)
+		http.Error(w, "Request is too big", http.StatusRequestEntityTooLarge)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		f.log.Errorf("Error reading body: %v", err)

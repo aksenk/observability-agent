@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
+	"observability-agent/config"
 	"observability-agent/core"
 	"observability-agent/logger"
 )
@@ -13,8 +14,9 @@ type Frontend interface {
 }
 
 type HTTPFrontend struct {
-	log   logger.Logger
-	agent *core.Agent
+	log    logger.Logger
+	agent  *core.Agent
+	config *config.Config
 }
 
 func (f *HTTPFrontend) Start() error {
@@ -29,11 +31,12 @@ func (f *HTTPFrontend) Start() error {
 	return http.ListenAndServe(":8080", r)
 }
 
-func NewHTTP(agent *core.Agent, log logger.Logger) (Frontend, error) {
+func NewHTTP(agent *core.Agent, log logger.Logger, cfg *config.Config) (Frontend, error) {
 	var front Frontend
 	front = &HTTPFrontend{
-		agent: agent,
-		log:   log,
+		agent:  agent,
+		log:    log,
+		config: cfg,
 	}
 	return front, nil
 }
