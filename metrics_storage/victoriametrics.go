@@ -26,7 +26,7 @@ func (c *VMAgentClient) Prepare(ctx context.Context) error {
 	return nil
 }
 
-func (c *VMAgentClient) Save(ctx context.Context, metrics core.MetricsRequest) error {
+func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) error {
 
 	// TODO timeout
 	client := http.Client{}

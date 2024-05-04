@@ -22,7 +22,7 @@ func (f *HTTPFrontend) Start() error {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
 	r.Route("/api/v1/", func(r chi.Router) {
-		r.Post("/logs", f.logsReceiverHandler)
+		r.Post("/logs/elasticsearch/bulk", f.logsReceiverHandler)
 		r.Put("/metrics/victoriametrics/import", f.metricsReceiverHandler)
 	})
 	f.log.Info("Starting agent")

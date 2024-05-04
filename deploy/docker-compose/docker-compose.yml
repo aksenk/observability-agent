@@ -73,6 +73,17 @@ services:
     networks:
       - vm_net
     restart: always
+  kibana:
+    container_name: kibana
+    image: kibana:8.13.0
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      ELASTICSEARCH_SERVICEACCOUNTTOKEN: "AAEAAWVsYXN0aWMva2liYW5hL3Rva2VuMTo1LXJXbV9kU1FhMnVjRFRwN3RKYUdn"
+    ports:
+      - 5601:5601
+    networks:
+      - vm_net
+    restart: always
 volumes:
   vmagentdata: {}
   vmdata: {}

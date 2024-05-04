@@ -21,7 +21,7 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	metrics := core.MetricsRequest{
+	metrics := &core.MetricsRequest{
 		Data: body,
 	}
 

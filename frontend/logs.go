@@ -1,9 +1,11 @@
 package frontend
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"observability-agent/core"
+	"strconv"
 )
 
 func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,18 +23,40 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	logs := core.LogsRequest{
-		Data: body,
+	userID, err := getUserID(r)
+	if err != nil {
+		f.log.Warnf("Error getting user ID: %v", err)
 	}
 
-	err = f.agent.SaveLogs(r.Context(), logs)
+	request := &core.LogsRequest{
+		Data:   body,
+		UserID: userID,
+	}
+
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		request.Gzip = true
+	}
+
+	err = f.agent.SaveLogs(r.Context(), request)
 	if err != nil {
-		f.log.Error("Error receiving logs: %v", err)
-		http.Error(w, "Error receiving logs", http.StatusInternalServerError)
+		f.log.Errorf("Error receiving request: %v", err)
+		http.Error(w, "Error receiving request", http.StatusInternalServerError)
 		return
 	}
 
 	w.Write([]byte("Logs received successfully\n"))
 	w.WriteHeader(http.StatusOK)
 	return
+}
+
+func getUserID(r *http.Request) (int64, error) {
+	i := r.Header.Get("user-id")
+	if i == "" {
+		return 0, fmt.Errorf("user-id is not found")
+	}
+	userID, err := strconv.ParseInt(i, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("user-id is not a number")
+	}
+	return userID, nil
 }

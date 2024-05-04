@@ -6,11 +6,15 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig  `env:", prefix=SERVER_"`
-	Logs     LogsConfig    `env:", prefix=LOGS_"`
-	Metrics  MetricsConfig `env:", prefix=METRICS_"`
-	Auth     AuthConfig    `env:", prefix=AUTH_"`
-	LogLevel string        `env:"LOG_LEVEL, default=info"`
+	Server  ServerConfig  `env:", prefix=SERVER_"`
+	Logs    LogsConfig    `env:", prefix=LOGS_"`
+	Metrics MetricsConfig `env:", prefix=METRICS_"`
+	Auth    AuthConfig    `env:", prefix=AUTH_"`
+	Log     LogConfig     `env:", prefix=LOG_"`
+}
+
+type LogConfig struct {
+	Level string `env:"LEVEL, default=info"`
 }
 
 type ServerConfig struct {
@@ -19,8 +23,9 @@ type ServerConfig struct {
 }
 
 type LogsConfig struct {
-	Type    string              `env:"TYPE, default=elasticsearch"`
-	Elastic ElasticSearchConfig `env:", prefix=ELASTIC_"`
+	Type             string              `env:"TYPE, default=elasticsearch"`
+	Elastic          ElasticSearchConfig `env:", prefix=ELASTIC_"`
+	MaximumBytesSize int64               `env:"MAXIMUM_BYTES_SIZE, default=5242880"`
 }
 
 type ElasticSearchConfig struct {
