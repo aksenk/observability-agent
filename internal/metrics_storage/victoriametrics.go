@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"observability-agent/core"
-	"observability-agent/logger"
+	"observability-agent/internal/core"
+	"observability-agent/internal/logger"
 )
 
 // VMAgentClient

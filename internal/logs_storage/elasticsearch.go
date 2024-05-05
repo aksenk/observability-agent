@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
-	"observability-agent/core"
-	"observability-agent/logger"
+	"observability-agent/internal/core"
+	"observability-agent/internal/logger"
 )
 
 // ElasticSearchClient

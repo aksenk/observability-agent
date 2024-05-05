@@ -3,7 +3,7 @@ package frontend
 import (
 	"io"
 	"net/http"
-	"observability-agent/core"
+	"observability-agent/internal/core"
 )
 
 // logsReceiverHandler

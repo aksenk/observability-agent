@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"observability-agent/config"
-	"observability-agent/core"
-	"observability-agent/frontend"
-	"observability-agent/logger"
-	"observability-agent/logs_storage"
-	"observability-agent/metrics_storage"
+	"observability-agent/internal/config"
+	"observability-agent/internal/core"
+	"observability-agent/internal/frontend"
+	"observability-agent/internal/logger"
+	"observability-agent/internal/logs_storage"
+	"observability-agent/internal/metrics_storage"
 	"os"
 )
 
@@ -18,6 +18,7 @@ TODO list
 + receiving metrics
 + receiving logs
 - validating logs
+- add user label to metrics from jwt
 - logger
 - circuit breaker
 - sampling
@@ -27,7 +28,6 @@ TODO list
 - jwt
 - prometheus metrics
 - opentelemetry metrics?
-- add user label to metrics from jwt
 - logs contract
 - metrics contract
 - graceful shutdown

@@ -4,9 +4,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
-	"observability-agent/config"
-	"observability-agent/core"
-	"observability-agent/logger"
+	"observability-agent/internal/config"
+	"observability-agent/internal/core"
+	"observability-agent/internal/logger"
 )
 
 // Frontend
