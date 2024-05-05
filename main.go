@@ -13,6 +13,28 @@ import (
 	"os"
 )
 
+/*
+TODO list
++ receiving metrics
++ receiving logs
+- validating logs
+- logger
+- circuit breaker
+- sampling
+- distributed rate limit
+  - per user
+  - total?
+- jwt
+- prometheus metrics
+- opentelemetry metrics?
+- add user label to metrics from jwt
+- logs contract
+- metrics contract
+- graceful shutdown
+- tests
+- autotests
+*/
+
 func main() {
 	ctx := context.Background()
 
