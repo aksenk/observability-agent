@@ -1,35 +1,52 @@
 package frontend
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"observability-agent/internal/core"
+	"time"
 )
 
 // metricsReceiverHandler
 // Обработчик запроса на запись метрик
 func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Request) {
+	// для подсчета времени выполнения запроса
+	reqStart := time.Now()
+	// статус ответа по умолчанию
+	reqStatus := http.StatusOK
+
+	// по завершении запроса регистрируем метрику
+	defer func() {
+		sinceStart := time.Since(reqStart).Seconds()
+		f.metrics.incomingRequests.WithLabelValues(
+			fmt.Sprintf("%d", reqStatus),
+			"metrics",
+		).Observe(sinceStart)
+	}()
+
 	if r.ContentLength > f.config.Metrics.MaximumBytesSize {
+		reqStatus = http.StatusRequestEntityTooLarge
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
-		http.Error(w, "Request is too big", http.StatusRequestEntityTooLarge)
+		http.Error(w, "Request is too big", reqStatus)
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error reading body: %v", err)
-		http.Error(w, "Error reading body", http.StatusInternalServerError)
+		http.Error(w, "Error reading body", reqStatus)
 		return
 	}
 	defer r.Body.Close()
 
 	if len(body) == 0 {
+		reqStatus = http.StatusBadRequest
 		f.log.Warn("Request with empty body")
-		http.Error(w, "empty body", http.StatusBadRequest)
+		http.Error(w, "empty body", reqStatus)
 		return
 	}
-
-	// TODO аус
 
 	metrics := &core.MetricsRequest{
 		Data: body,
@@ -41,12 +58,13 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 
 	err = f.agent.SaveMetrics(r.Context(), metrics)
 	if err != nil {
+		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error receiving metrics: %v", err)
-		http.Error(w, "Error receiving metrics", http.StatusInternalServerError)
+		http.Error(w, "Error receiving metrics", reqStatus)
 		return
 	}
 
 	w.Write([]byte("Metrics received successfully\n"))
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(reqStatus)
 	return
 }

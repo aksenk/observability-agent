@@ -1,25 +1,43 @@
 package frontend
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"observability-agent/internal/core"
+	"time"
 )
 
 // logsReceiverHandler
 // Обработчик запроса на получение логов
 func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Request) {
+	// для подсчета времени выполнения запроса
+	reqStart := time.Now()
+	// статус ответа по умолчанию
+	reqStatus := http.StatusOK
+
+	// по завершении запроса регистрируем метрику
+	defer func() {
+		sinceStart := time.Since(reqStart).Seconds()
+		f.metrics.incomingRequests.WithLabelValues(
+			fmt.Sprintf("%d", reqStatus),
+			"logs",
+		).Observe(sinceStart)
+	}()
+
 	// Сразу проверяем что размер запроса не превышает максимально допустимый
 	if r.ContentLength > f.config.Logs.MaximumBytesSize {
+		reqStatus = http.StatusRequestEntityTooLarge
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
-		http.Error(w, "Request is too big", http.StatusRequestEntityTooLarge)
+		http.Error(w, "Request is too big", reqStatus)
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error reading body: %v", err)
-		http.Error(w, "Error reading body", http.StatusInternalServerError)
+		http.Error(w, "Error reading body", reqStatus)
 		return
 	}
 	defer r.Body.Close()
@@ -37,8 +55,9 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	if !f.config.Auth.AllowUnauthorized && userID == 0 {
-		f.log.Warnf("Unauthorized requests is forbidden")
-		http.Error(w, "Unauthorized requests is forbidden", http.StatusForbidden)
+		reqStatus = http.StatusForbidden
+		f.log.Warnf("Unauthorized incomingRequests is forbidden")
+		http.Error(w, "Unauthorized incomingRequests is forbidden", reqStatus)
 		return
 	}
 
@@ -53,12 +72,13 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 
 	err = f.agent.SaveLogs(r.Context(), request)
 	if err != nil {
+		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error receiving request: %v", err)
-		http.Error(w, "Error receiving request", http.StatusInternalServerError)
+		http.Error(w, "Error receiving request", reqStatus)
 		return
 	}
 
 	w.Write([]byte("Logs received successfully\n"))
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(reqStatus)
 	return
 }
