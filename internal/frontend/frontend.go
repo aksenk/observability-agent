@@ -37,13 +37,15 @@ type HTTPFrontend struct {
 }
 
 // Start
-// Запуск фронтенда
+// Запуск HTTP фронтенда
 func (f *HTTPFrontend) Start() error {
 	f.metrics = PreparePrometheusMetrics()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Logger)
+	r.Use(middleware.Timeout(f.config.Server.Timeout))
+	//r.Use(middleware.Logger)
+	r.Use(logger.Middleware(f.log))
 	r.Handle("/metrics", promhttp.Handler())
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Post("/logs/elasticsearch/bulk", f.logsReceiverHandler)

@@ -1,6 +1,10 @@
 package logger
 
-import "github.com/sirupsen/logrus"
+import (
+	"fmt"
+	"github.com/sirupsen/logrus"
+	"net/http"
+)
 
 // Logger
 // Интерфейс для работы с логгерами
@@ -15,30 +19,48 @@ type Logger interface {
 	Warnf(format string, args ...interface{})
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
+	SetLevel(level string) error
+	SetFormatter(formatter string) error
 }
 
 // New
 // Конструктор нового логгера
-func New(logLevelString string) (Logger, error) {
+func New() Logger {
 	var logger Logger
 
-	logLevel, err := logrus.ParseLevel(logLevelString)
-	if err != nil {
-		return nil, err
+	logger = &LogrusLogger{
+		log: logrus.New(),
 	}
 
-	ll := logrus.New()
-	ll.Level = logLevel
-
-	logger = ll
-
-	return logger, nil
+	return logger
 }
 
 // LogrusLogger
 // Логгер использующий библиотеку logrus
 type LogrusLogger struct {
 	log *logrus.Logger
+}
+
+func (l *LogrusLogger) SetLevel(level string) error {
+	logLevel, err := logrus.ParseLevel(level)
+	if err != nil {
+		return err
+	}
+
+	l.log.SetLevel(logLevel)
+	return nil
+}
+
+func (l *LogrusLogger) SetFormatter(formatter string) error {
+	switch formatter {
+	case "default":
+		l.log.SetFormatter(&logrus.TextFormatter{})
+	case "json":
+		l.log.SetFormatter(&logrus.JSONFormatter{})
+	default:
+		return fmt.Errorf("unknown log formatter: %v", formatter)
+	}
+	return nil
 }
 
 func (l *LogrusLogger) Debug(args ...interface{}) {
@@ -79,4 +101,13 @@ func (l *LogrusLogger) Errorf(format string, args ...interface{}) {
 
 func (l *LogrusLogger) Fatalf(format string, args ...interface{}) {
 	l.log.Fatalf(format, args)
+}
+
+func Middleware(logger Logger) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			logger.Debugf("Request: %s %s", r.Method, r.URL.Path)
+			next.ServeHTTP(w, r)
+		})
+	}
 }

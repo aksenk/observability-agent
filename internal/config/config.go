@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"github.com/sethvargo/go-envconfig"
+	"time"
 )
 
 type Config struct {
@@ -15,11 +16,14 @@ type Config struct {
 
 type LogConfig struct {
 	Level string `env:"LEVEL, default=info"`
+	Type  string `env:"TYPE, default=default"`
 }
 
 type ServerConfig struct {
-	Host string `env:"HOST, default=0.0.0.0"`
-	Port int    `env:"PORT, default=8080"`
+	Host         string        `env:"HOST, default=0.0.0.0"`
+	Port         int           `env:"PORT, default=8080"`
+	Timeout      time.Duration `env:"TIMEOUT, default=10s"`
+	SamplingRate float64       `env:"SAMPLING_RATE, default=1.0"`
 }
 
 type LogsConfig struct {

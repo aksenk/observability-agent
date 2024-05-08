@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"observability-agent/internal/config"
 	"observability-agent/internal/core"
 	"observability-agent/internal/frontend"
 	"observability-agent/internal/logger"
 	"observability-agent/internal/logs_storage"
 	"observability-agent/internal/metrics_storage"
-	"os"
 )
 
 /*
@@ -19,14 +16,14 @@ TODO list
 + receiving logs
 - validating logs
 - add user label to metrics from jwt
-- logger
++ logger
 - circuit breaker
 - sampling
 - distributed rate limit
   - per user
   - total?
 - jwt
-- prometheus metrics
++ prometheus metrics
 - opentelemetry metrics?
 - logs contract
 - metrics contract
@@ -38,17 +35,21 @@ TODO list
 func main() {
 	ctx := context.Background()
 
+	// Инициализация логгера.
+	log := logger.New()
+
 	// Инициализация конфига.
 	cfg, err := config.Get(ctx)
 	if err != nil {
 		log.Fatalf("Error init config: %v", err)
 	}
 
-	// Инициализация логгера.
-	log, err := logger.New(cfg.Log.Level)
-	if err != nil {
-		fmt.Printf("Logger init error: %v", err)
-		os.Exit(1)
+	if err := log.SetLevel(cfg.Log.Level); err != nil {
+		log.Fatalf("Incorrect log level: %v", err)
+	}
+
+	if err := log.SetFormatter(cfg.Log.Type); err != nil {
+		log.Fatalf("Incorrect log formatter: %v", err)
 	}
 
 	// Инициализация хранилища для логов.

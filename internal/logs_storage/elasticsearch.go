@@ -119,13 +119,12 @@ func (c *ElasticSearchClient) Save(ctx context.Context, request *core.LogsReques
 		bytes.NewReader(bulkBody.Bytes()),
 		c.client.Bulk.WithContext(ctx),
 	)
-
-	c.log.Debugf(resp.String())
-	resp.Body.Close()
-
 	if err != nil {
 		return err
 	}
+
+	c.log.Debugf(resp.String())
+	resp.Body.Close()
 
 	if resp.IsError() {
 		return fmt.Errorf("%s", resp.Status())
