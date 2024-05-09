@@ -16,19 +16,18 @@ import (
 TODO list
 + receiving metrics
 + receiving logs
-- validating logs
-- add user label to metrics from jwt
 + logger
-- circuit breaker
 + sampling
-- distributed rate limit
-  - per user
-  - total?
-- jwt
++ jwt
 + prometheus metrics
+
+- add user label to metrics from jwt
+- circuit breaker
+- distributed rate limit per user
+- rate limit for instance
 - opentelemetry metrics?
-- logs contract
-- metrics contract
+- logs contract + validation
+- metrics contract + validation
 - graceful shutdown
 - tests
 - autotests
