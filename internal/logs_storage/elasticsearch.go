@@ -11,6 +11,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"observability-agent/internal/core"
 	"observability-agent/internal/logger"
+	"observability-agent/internal/sampler"
 )
 
 // ElasticSearchClient
@@ -19,6 +20,7 @@ type ElasticSearchClient struct {
 	client    *elasticsearch.Client
 	indexName string
 	log       logger.Logger
+	sampler   *sampler.Sampler
 }
 
 // ElasticSearchDocumentMetadataIndex
@@ -85,6 +87,12 @@ func NewElasticSearchClient(ctx context.Context, addresses []string, username, p
 	}
 
 	return client, nil
+}
+
+// IsSampled
+// Проверка на семлирование (допуск только определенного процента трафика). Возвращает true если запрос должен быть отброшен
+func (c *ElasticSearchClient) IsSampled() bool {
+	return c.sampler.IsSampled()
 }
 
 // Ping

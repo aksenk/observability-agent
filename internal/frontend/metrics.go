@@ -83,7 +83,7 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Сохраняем полученные данные
-	err = f.agent.SaveMetrics(r.Context(), metrics)
+	err = f.agent.MetricsSave(r.Context(), metrics)
 	if err != nil {
 		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error receiving metrics: %v", err)

@@ -86,7 +86,7 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Сохраняем полученные данные
-	err = f.agent.SaveLogs(r.Context(), request)
+	err = f.agent.LogsSave(r.Context(), request)
 	if err != nil {
 		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error receiving request: %v", err)

@@ -16,6 +16,7 @@ type LogsStorage interface {
 	Close(ctx context.Context) error
 	Prepare(ctx context.Context) error
 	Save(ctx context.Context, request *LogsRequest) error
+	IsSampled() bool
 }
 
 // MetricsStorage
@@ -25,6 +26,7 @@ type MetricsStorage interface {
 	Close(ctx context.Context) error
 	Prepare(ctx context.Context) error
 	Save(ctx context.Context, request *MetricsRequest) error
+	IsSampled() bool
 }
 
 // MetricsRequest
@@ -58,15 +60,15 @@ func NewAgent(metricsStorage MetricsStorage, logsStorage LogsStorage) (*Agent, e
 	}, nil
 }
 
-// SaveMetrics
+// MetricsSave
 // Сохранение метрик в хранилище
-func (a *Agent) SaveMetrics(ctx context.Context, request *MetricsRequest) error {
+func (a *Agent) MetricsSave(ctx context.Context, request *MetricsRequest) error {
 	return a.metricsStorage.Save(ctx, request)
 }
 
-// SaveLogs
+// LogsSave
 // Сохранение логов в хранилище
-func (a *Agent) SaveLogs(ctx context.Context, request *LogsRequest) error {
+func (a *Agent) LogsSave(ctx context.Context, request *LogsRequest) error {
 	// Проверяем что данные не закодированы, если нет заголовка 'Content-Encoding: gzip'
 	if isGzipped(request.Data) && !request.Gzip {
 		return fmt.Errorf("request body is gzipped but header 'Content-Encoding: gzip' is not exist")

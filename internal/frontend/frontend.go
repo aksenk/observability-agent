@@ -15,9 +15,9 @@ const metricsPrefix string = "observability_agent_"
 
 var histogramBuckets = []float64{0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 15}
 
-// promMetrics
+// PromMetrics
 // Объект для хранения метрик Prometheus
-type promMetrics struct {
+type PromMetrics struct {
 	incomingRequests *prometheus.HistogramVec
 }
 
@@ -33,7 +33,7 @@ type HTTPFrontend struct {
 	log     logger.Logger
 	agent   *core.Agent
 	config  *config.Config
-	metrics *promMetrics
+	metrics *PromMetrics
 }
 
 // Start
@@ -69,7 +69,7 @@ func NewHTTP(agent *core.Agent, log logger.Logger, cfg *config.Config) (Frontend
 
 // PreparePrometheusMetrics
 // Функция для инициализации метрик Prometheus
-func PreparePrometheusMetrics() *promMetrics {
+func PreparePrometheusMetrics() *PromMetrics {
 	incomingRequests := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    metricsPrefix + "incoming_requests",
@@ -80,7 +80,7 @@ func PreparePrometheusMetrics() *promMetrics {
 
 	prometheus.MustRegister(incomingRequests)
 
-	return &promMetrics{
+	return &PromMetrics{
 		incomingRequests: incomingRequests,
 	}
 }

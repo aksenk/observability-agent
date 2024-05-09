@@ -7,13 +7,21 @@ import (
 	"net/http"
 	"observability-agent/internal/core"
 	"observability-agent/internal/logger"
+	"observability-agent/internal/sampler"
 )
 
 // VMAgentClient
 // Клиент для работы с victoriametrics agent
 type VMAgentClient struct {
-	url string
-	log logger.Logger
+	url     string
+	log     logger.Logger
+	sampler *sampler.Sampler
+}
+
+// IsSampled
+// Проверка на семлирование (допуск только определенного процента трафика). Возвращает true если запрос должен быть отброшен
+func (c *VMAgentClient) IsSampled() bool {
+	return c.sampler.IsSampled()
 }
 
 // Ping
