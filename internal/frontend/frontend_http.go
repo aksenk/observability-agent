@@ -58,6 +58,8 @@ func NewHTTP(agent *core.Agent, log logger.Logger, cfg *config.Config, auth auth
 	return front, nil
 }
 
+// AuthMiddleware
+// Мидлвар для проверки авторизации и определения user ID
 func (f *HTTPFrontend) AuthMiddleware(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		// для подсчета времени выполнения запроса
