@@ -27,6 +27,14 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 		).Observe(sinceStart)
 	}()
 
+	// проверяем, нужно ли отбросить запрос на основе семплирования
+	if f.agent.LogsIsSampled() {
+		f.log.Debugf("Logs request are sampled")
+		reqStatus = http.StatusTooManyRequests
+		http.Error(w, "Logs request are sampled", reqStatus)
+		return
+	}
+
 	// Сразу проверяем что заявленный размер запроса не превышает максимально допустимый
 	if r.ContentLength > f.config.Logs.MaximumBytesSize {
 		reqStatus = http.StatusRequestEntityTooLarge

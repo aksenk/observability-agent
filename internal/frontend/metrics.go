@@ -25,6 +25,14 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 		).Observe(sinceStart)
 	}()
 
+	// проверяем, нужно ли отбросить запрос на основе семплирования
+	if f.agent.MetricsIsSampled() {
+		f.log.Debugf("Metrics request are sampled")
+		reqStatus = http.StatusTooManyRequests
+		http.Error(w, "Metrics request are sampled", reqStatus)
+		return
+	}
+
 	// Сразу проверяем что заявленный размер запроса не превышает максимально допустимый
 	if r.ContentLength > f.config.Metrics.MaximumBytesSize {
 		reqStatus = http.StatusRequestEntityTooLarge

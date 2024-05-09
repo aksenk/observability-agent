@@ -66,6 +66,12 @@ func (a *Agent) MetricsSave(ctx context.Context, request *MetricsRequest) error 
 	return a.metricsStorage.Save(ctx, request)
 }
 
+// MetricsIsSampled
+// Проверка на семлирование (допуск только определенного процента трафика). Возвращает true если запрос должен быть отброшен
+func (a *Agent) MetricsIsSampled() bool {
+	return a.metricsStorage.IsSampled()
+}
+
 // LogsSave
 // Сохранение логов в хранилище
 func (a *Agent) LogsSave(ctx context.Context, request *LogsRequest) error {
@@ -89,6 +95,12 @@ func (a *Agent) LogsSave(ctx context.Context, request *LogsRequest) error {
 	}
 
 	return a.logsStorage.Save(ctx, request)
+}
+
+// LogsIsSampled
+// Проверка на семлирование (допуск только определенного процента трафика). Возвращает true если запрос должен быть отброшен
+func (a *Agent) LogsIsSampled() bool {
+	return a.logsStorage.IsSampled()
 }
 
 func (a *Agent) GetUserID(rawData string) (int64, error) {

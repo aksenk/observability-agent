@@ -70,15 +70,16 @@ func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) 
 	return nil
 }
 
-// NewClient
+// NewVMAgentClient
 // Конструктор для VMAgentClient
-func NewClient(url string, extraLabels []string, log logger.Logger) (*VMAgentClient, error) {
+func NewVMAgentClient(url string, extraLabels []string, log logger.Logger, sampler *sampler.Sampler) (*VMAgentClient, error) {
 	if url == "" {
 		return nil, fmt.Errorf("url is empty")
 	}
 	// TODO добавить поддержку extra labels
 	return &VMAgentClient{
-		url: url,
-		log: log,
+		url:     url,
+		log:     log,
+		sampler: sampler,
 	}, nil
 }

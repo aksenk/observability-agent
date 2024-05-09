@@ -20,16 +20,16 @@ type LogConfig struct {
 }
 
 type ServerConfig struct {
-	Host         string        `env:"HOST, default=0.0.0.0"`
-	Port         int           `env:"PORT, default=8080"`
-	Timeout      time.Duration `env:"TIMEOUT, default=10s"`
-	SamplingRate float64       `env:"SAMPLING_RATE, default=1.0"`
+	Host    string        `env:"HOST, default=0.0.0.0"`
+	Port    int           `env:"PORT, default=8080"`
+	Timeout time.Duration `env:"TIMEOUT, default=10s"`
 }
 
 type LogsConfig struct {
 	Type             string              `env:"TYPE, default=elasticsearch"`
 	Elastic          ElasticSearchConfig `env:", prefix=ELASTIC_"`
 	MaximumBytesSize int64               `env:"MAXIMUM_BYTES_SIZE, default=5242880"` // 5 megabytes
+	SamplingRate     float64             `env:"SAMPLING_RATE, default=1.0"`          // 1.0 означает приём 100% трафика
 }
 
 type ElasticSearchConfig struct {
@@ -43,6 +43,7 @@ type MetricsConfig struct {
 	Type             string                `env:"TYPE, default=victoriametrics"`
 	Victoria         VictoriaMetricsConfig `env:", prefix=VICTORIA_"`
 	MaximumBytesSize int64                 `env:"MAXIMUM_BYTES_SIZE, default=5242880"` // 5 megabytes
+	SamplingRate     float64               `env:"SAMPLING_RATE, default=1.0"`          // 1.0 означает приём 100% трафика
 }
 
 type VictoriaMetricsConfig struct {

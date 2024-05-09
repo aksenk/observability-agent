@@ -45,7 +45,7 @@ type ElasticSearchDocumentPayload struct {
 
 // NewElasticSearchClient
 // Конструктор для ElasticSearchClient
-func NewElasticSearchClient(ctx context.Context, addresses []string, username, password, indexName string, log logger.Logger) (*ElasticSearchClient, error) {
+func NewElasticSearchClient(ctx context.Context, addresses []string, username, password, indexName string, log logger.Logger, sampler *sampler.Sampler) (*ElasticSearchClient, error) {
 	if len(addresses) == 0 || addresses[0] == "" {
 		return nil, fmt.Errorf("addresses is not defined")
 	}
@@ -74,6 +74,7 @@ func NewElasticSearchClient(ctx context.Context, addresses []string, username, p
 		client:    es,
 		indexName: indexName,
 		log:       log,
+		sampler:   sampler,
 	}
 
 	err = client.Ping(ctx)

@@ -8,6 +8,7 @@ import (
 	"observability-agent/internal/logger"
 	"observability-agent/internal/logs_storage"
 	"observability-agent/internal/metrics_storage"
+	"observability-agent/internal/sampler"
 )
 
 /*
@@ -18,7 +19,7 @@ TODO list
 - add user label to metrics from jwt
 + logger
 - circuit breaker
-- sampling
++ sampling
 - distributed rate limit
   - per user
   - total?
@@ -52,6 +53,18 @@ func main() {
 		log.Fatalf("Incorrect log formatter: %v", err)
 	}
 
+	// Инициализация механизма семплирования для логов
+	logsSampler, err := sampler.New(cfg.Logs.SamplingRate)
+	if err != nil {
+		log.Fatalf("Error init logs sampler: %v", err)
+	}
+
+	// Инициализация механизма семплирования для метрик
+	metricsSampler, err := sampler.New(cfg.Metrics.SamplingRate)
+	if err != nil {
+		log.Fatalf("Error init metrics sampler: %v", err)
+	}
+
 	// Инициализация хранилища для логов.
 	var logsStorage core.LogsStorage
 	switch cfg.Logs.Type {
@@ -62,7 +75,8 @@ func main() {
 			cfg.Logs.Elastic.User,
 			cfg.Logs.Elastic.Password,
 			cfg.Logs.Elastic.Index,
-			log)
+			log,
+			logsSampler)
 		if err != nil {
 			log.Fatalf("Error init log storage: %v", err)
 		}
@@ -74,7 +88,11 @@ func main() {
 	var metricsStorage core.MetricsStorage
 	switch cfg.Metrics.Type {
 	case "victoriametrics":
-		metricsStorage, err = metrics_storage.NewClient(cfg.Metrics.Victoria.URL, cfg.Metrics.Victoria.ExtraLabels, log)
+		metricsStorage, err = metrics_storage.NewVMAgentClient(
+			cfg.Metrics.Victoria.URL,
+			cfg.Metrics.Victoria.ExtraLabels,
+			log,
+			metricsSampler)
 	default:
 		log.Fatalf("Unknown metrics storage type: %v", cfg.Metrics.Type)
 	}

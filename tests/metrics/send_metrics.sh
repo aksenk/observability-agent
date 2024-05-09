@@ -7,6 +7,8 @@ if [ ! -f _current_value ]; then
 fi
 rm -f _metrics
 
+USER_ID=123
+
 CURRENT_TS=`date "+%s"`
 CURRENT_TS="${CURRENT_TS}000"
 
@@ -22,4 +24,4 @@ echo -e $TPL > _metrics
 echo $NEW_VALUE > _current_value
 cat _metrics | gzip > _metrics.gz
 #curl -i 'http://localhost:8429/api/v1/import' -T ./_metrics.gz
-curl -i -H 'Content-Encoding: gzip' 'http://localhost:8080/api/v1/metrics/victoriametrics/import' -T ./_metrics.gz
+curl -i -H 'Content-Encoding: gzip'  -H "user-id: $USER_ID" 'http://localhost:8080/api/v1/metrics/victoriametrics/import' -T ./_metrics.gz
