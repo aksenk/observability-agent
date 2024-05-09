@@ -54,6 +54,7 @@ type VictoriaMetricsConfig struct {
 type AuthConfig struct {
 	AllowUnauthorized bool   `env:"ALLOW_UNAUTHORIZED, default=true"`
 	Secret            string `env:"SECRET"`
+	Header            string `env:"HEADER, default=x-access-token"`
 }
 
 func Get(ctx context.Context) (*Config, error) {

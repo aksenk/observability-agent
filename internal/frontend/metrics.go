@@ -16,14 +16,24 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 	// статус ответа по умолчанию
 	reqStatus := http.StatusOK
 
+	ctx := r.Context()
+
 	// по завершении запроса регистрируем метрику
 	defer func() {
-		sinceStart := time.Since(reqStart).Seconds()
 		f.metrics.incomingRequests.WithLabelValues(
 			fmt.Sprintf("%d", reqStatus),
 			"metrics",
-		).Observe(sinceStart)
+		).Observe(time.Since(reqStart).Seconds())
 	}()
+
+	// Пробуем получить user ID из контекста (добавляется ранее в middleware)
+	userID, ok := ctx.Value(contextUserIDKey).(int64)
+	if !ok {
+		f.log.Error("Error getting user ID")
+		reqStatus = http.StatusInternalServerError
+		http.Error(w, "Error getting user ID", reqStatus)
+		return
+	}
 
 	// проверяем, нужно ли отбросить запрос на основе семплирования
 	if f.agent.MetricsIsSampled() {
@@ -38,20 +48,6 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 		reqStatus = http.StatusRequestEntityTooLarge
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
 		http.Error(w, "Request is too big", reqStatus)
-		return
-	}
-
-	// Пробуем получить user ID
-	userID, err := f.agent.GetUserID(r.Header.Get("user-id"))
-	if err != nil {
-		f.log.Warnf("Error getting user ID: %v", err)
-	}
-
-	// Если запрещены запросы от неавторизованных пользователей и не смогли получить user UD, то возвращаем ошибку
-	if !f.config.Auth.AllowUnauthorized && userID == 0 {
-		reqStatus = http.StatusForbidden
-		f.log.Warnf("Unauthorized requests is forbidden")
-		http.Error(w, "Unauthorized requests is forbidden", reqStatus)
 		return
 	}
 
@@ -82,7 +78,8 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 
 	// Подготавливаем объект для передачи в агент
 	metrics := &core.MetricsRequest{
-		Data: body,
+		Data:   body,
+		UserID: userID,
 	}
 
 	// Если запрос закодирован, то устанавливаем флаг, указывающий на это
@@ -91,7 +88,7 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Сохраняем полученные данные
-	err = f.agent.MetricsSave(r.Context(), metrics)
+	err = f.agent.MetricsSave(ctx, metrics)
 	if err != nil {
 		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error receiving metrics: %v", err)

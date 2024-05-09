@@ -5,6 +5,7 @@ go 1.22
 require (
 	github.com/elastic/go-elasticsearch/v8 v8.13.1
 	github.com/go-chi/chi/v5 v5.0.12
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/prometheus/client_golang v1.19.0
 	github.com/sethvargo/go-envconfig v1.0.1
 	github.com/sirupsen/logrus v1.9.3

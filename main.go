@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"observability-agent/internal/auth"
 	"observability-agent/internal/config"
 	"observability-agent/internal/core"
 	"observability-agent/internal/frontend"
@@ -51,6 +52,12 @@ func main() {
 
 	if err := log.SetFormatter(cfg.Log.Type); err != nil {
 		log.Fatalf("Incorrect log formatter: %v", err)
+	}
+
+	// Инициализация механизма авторизации.
+	jwtVerifier, err := auth.NewJWTVerifier(cfg.Auth.Secret)
+	if err != nil {
+		log.Fatalf("Error init jwt verifier: %v", err)
 	}
 
 	// Инициализация механизма семплирования для логов
@@ -104,7 +111,7 @@ func main() {
 	}
 
 	// Инициализация фронтенда для приложения.
-	front, err := frontend.NewHTTP(agent, log, cfg)
+	front, err := frontend.NewHTTP(agent, log, cfg, jwtVerifier)
 	if err != nil {
 		log.Fatalf("Error init frontend: %v", err)
 	}

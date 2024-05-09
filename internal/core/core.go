@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 )
 
 // LogsStorage
@@ -32,8 +31,9 @@ type MetricsStorage interface {
 // MetricsRequest
 // Объект для хранения данных из входящего запроса с метриками
 type MetricsRequest struct {
-	Data []byte
-	Gzip bool
+	Data   []byte
+	Gzip   bool
+	UserID int64
 }
 
 // LogsRequest
@@ -49,6 +49,11 @@ type LogsRequest struct {
 type Agent struct {
 	metricsStorage MetricsStorage
 	logsStorage    LogsStorage
+}
+
+type SessionCookie struct {
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 // NewAgent
@@ -101,17 +106,6 @@ func (a *Agent) LogsSave(ctx context.Context, request *LogsRequest) error {
 // Проверка на семлирование (допуск только определенного процента трафика). Возвращает true если запрос должен быть отброшен
 func (a *Agent) LogsIsSampled() bool {
 	return a.logsStorage.IsSampled()
-}
-
-func (a *Agent) GetUserID(rawData string) (int64, error) {
-	if rawData == "" {
-		return 0, fmt.Errorf("user-id is not found")
-	}
-	userID, err := strconv.ParseInt(rawData, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("user-id is not a number")
-	}
-	return userID, nil
 }
 
 // isGzipped
