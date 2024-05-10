@@ -95,9 +95,6 @@ func (f *HTTPFrontend) AuthMiddleware(next http.Handler) http.Handler {
 		// Добавляем user ID в заголовок
 		r.Header.Set(headerUserID, fmt.Sprintf("%d", userID))
 
-		// Добавляем user ID в контекст
-		//ctx := context.WithValue(r.Context(), contextUserIDKey, userID)
-		// Добавляем контекст в запрос
 		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
