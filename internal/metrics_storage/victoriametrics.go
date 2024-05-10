@@ -8,14 +8,16 @@ import (
 	"observability-agent/internal/core"
 	"observability-agent/internal/logger"
 	"observability-agent/internal/sampler"
+	"strings"
 )
 
 // VMAgentClient
 // Клиент для работы с victoriametrics agent
 type VMAgentClient struct {
-	url     string
-	log     logger.Logger
-	sampler *sampler.Sampler
+	url         string
+	log         logger.Logger
+	sampler     *sampler.Sampler
+	extraLabels []string
 }
 
 // IsSampled
@@ -49,7 +51,16 @@ func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) 
 	// TODO timeout
 	client := http.Client{}
 
-	request, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(metrics.Data))
+	extraLabels := ""
+	if c.extraLabels != nil {
+		extraLabels = fmt.Sprintf("&extra_label=%v", strings.Join(c.extraLabels, "&extra_label="))
+	}
+
+	url := fmt.Sprintf("%v?extra_label=gambler_id=%v%v", c.url, metrics.UserID, extraLabels)
+
+	c.log.Debugf("url: %v", url)
+
+	request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(metrics.Data))
 	if err != nil {
 		return err
 	}
@@ -78,8 +89,9 @@ func NewVMAgentClient(url string, extraLabels []string, log logger.Logger, sampl
 	}
 	// TODO добавить поддержку extra labels
 	return &VMAgentClient{
-		url:     url,
-		log:     log,
-		sampler: sampler,
+		url:         url,
+		log:         log,
+		sampler:     sampler,
+		extraLabels: extraLabels,
 	}, nil
 }

@@ -20,8 +20,10 @@ TODO list
 + sampling
 + jwt
 + prometheus metrics
++ add user label to metrics from jwt
++ custom metric labels
 
-- add user label to metrics from jwt
+- client metrics histogram support
 - circuit breaker
 - distributed rate limit per user
 - rate limit for instance

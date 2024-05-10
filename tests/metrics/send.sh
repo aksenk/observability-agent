@@ -16,9 +16,9 @@ INCREASE_TO=10
 CURRENT_VALUE=`cat _current_value`
 NEW_VALUE=$((CURRENT_VALUE + INCREASE_TO))
 
-#TPL="{\"metric\":{\"__name__\":\"mobile_requests\",\"code\":\"200\",\"endpoint\":\"mobile-api\", \"platform\":\"android\", \"gambler_id\": \"1\"},\"values\":[${NEW_VALUE}],\"timestamps\":[${CURRENT_TS}]}\n{\"metric\":{\"__name__\":\"mobile_requests\",\"code\":\"200\",\"endpoint\":\"mobile-api\", \"platform\":\"android\", \"gambler_id\": \"2\"},\"values\":[${NEW_VALUE}],\"timestamps\":[${CURRENT_TS}]}"
+TPL="{\"metric\":{\"__name__\":\"mobile_requests\",\"code\":\"200\",\"endpoint\":\"mobile-api\", \"platform\":\"android\"},\"values\":[${NEW_VALUE}],\"timestamps\":[${CURRENT_TS}]}\n{\"metric\":{\"__name__\":\"mobile_requests\",\"code\":\"200\",\"endpoint\":\"mobile-api\", \"platform\":\"android\"},\"values\":[${NEW_VALUE}],\"timestamps\":[${CURRENT_TS}]}"
 
-TPL="{\"metric\":{\"__name__\":\"mobile_requests\",\"code\":\"200\",\"endpoint\":\"mobile-api\", \"platform\":\"android\", \"gambler_id\": \"1234\"},\"values\":[${NEW_VALUE}],\"timestamps\":[${CURRENT_TS}]}"
+#TPL="{\"metric\":{\"__name__\":\"mobile_requests\",\"code\":\"200\",\"endpoint\":\"mobile-api\", \"platform\":\"android\", \"gambler_id\": \"1234\"},\"values\":[${NEW_VALUE}],\"timestamps\":[${CURRENT_TS}]}"
 
 echo -e $TPL > _metrics
 echo $NEW_VALUE > _current_value
