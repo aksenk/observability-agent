@@ -26,10 +26,10 @@ func (f *HTTPFrontend) metricsReceiverHandler(w http.ResponseWriter, r *http.Req
 		).Observe(time.Since(reqStart).Seconds())
 	}()
 
-	// Пробуем получить user ID из контекста (добавляется ранее в middleware)
-	userID, ok := ctx.Value(contextUserIDKey).(int64)
-	if !ok {
-		f.log.Error("Error getting user ID")
+	// Пробуем получить user ID из заголовка (добавляется в middleware)
+	userID, err := f.GetUserIDFromHeader(r)
+	if err != nil {
+		f.log.Error("Error getting user ID: %v", err)
 		reqStatus = http.StatusInternalServerError
 		http.Error(w, "Error getting user ID", reqStatus)
 		return

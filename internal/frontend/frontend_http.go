@@ -1,7 +1,6 @@
 package frontend
 
 import (
-	"context"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -11,10 +10,12 @@ import (
 	"observability-agent/internal/config"
 	"observability-agent/internal/core"
 	"observability-agent/internal/logger"
+	"strconv"
 	"time"
 )
 
 const contextUserIDKey = "user_id"
+const headerUserID = "user_id"
 
 // HTTPFrontend
 // Реализация HTTP фронтенда
@@ -59,7 +60,7 @@ func NewHTTP(agent *core.Agent, log logger.Logger, cfg *config.Config, auth auth
 }
 
 // AuthMiddleware
-// Мидлвар для проверки авторизации и определения user ID
+// Мидлвар для проверки авторизации, определения user ID и записи его в заголовок
 func (f *HTTPFrontend) AuthMiddleware(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		// для подсчета времени выполнения запроса
@@ -91,10 +92,26 @@ func (f *HTTPFrontend) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// Добавляем user ID в заголовок
+		r.Header.Set(headerUserID, fmt.Sprintf("%d", userID))
+
 		// Добавляем user ID в контекст
-		ctx := context.WithValue(r.Context(), contextUserIDKey, userID)
+		//ctx := context.WithValue(r.Context(), contextUserIDKey, userID)
 		// Добавляем контекст в запрос
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
+}
+
+func (f *HTTPFrontend) GetUserIDFromHeader(r *http.Request) (int64, error) {
+	// Пробуем получить user ID из заголовка (добавляется в middleware)
+	userIDString := r.Header.Get(headerUserID)
+	if userIDString == "" {
+		return 0, fmt.Errorf("header %v is empty", headerUserID)
+	}
+	userID, err := strconv.ParseInt(userIDString, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return userID, nil
 }
