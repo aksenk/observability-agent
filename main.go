@@ -30,13 +30,13 @@ TODO list
 +\- timeouts (в эластике работает странно, фактический таймаут х4 от указанного)
 +\- logger (кривой какой-то)
 
-- client metrics histogram support
-- circuit breaker
 - distributed rate limit per user (redis)
-- opentelemetry metrics?
+- circuit breaker
+- graceful shutdown
+- client metrics histogram support
+- open telemetry metrics?
 - logs contract + validation
 - metrics contract + validation
-- graceful shutdown
 - tests
 - autotests
 */
