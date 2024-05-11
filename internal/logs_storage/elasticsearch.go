@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
+	"net/http"
 	"observability-agent/internal/core"
 	"observability-agent/internal/logger"
 	"observability-agent/internal/sampler"
+	"time"
 )
 
 // ElasticSearchClient
@@ -45,7 +47,7 @@ type ElasticSearchDocumentPayload struct {
 
 // NewElasticSearchClient
 // Конструктор для ElasticSearchClient
-func NewElasticSearchClient(ctx context.Context, addresses []string, username, password, indexName string, log logger.Logger, sampler *sampler.Sampler) (*ElasticSearchClient, error) {
+func NewElasticSearchClient(ctx context.Context, addresses []string, username, password, indexName string, timeout time.Duration, log logger.Logger, sampler *sampler.Sampler) (*ElasticSearchClient, error) {
 	if len(addresses) == 0 || addresses[0] == "" {
 		return nil, fmt.Errorf("addresses is not defined")
 	}
@@ -63,6 +65,10 @@ func NewElasticSearchClient(ctx context.Context, addresses []string, username, p
 		Addresses: addresses,
 		Username:  username,
 		Password:  password,
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: timeout,
+			//DialContext:           (&net.Dialer{Timeout: time.Second}).DialContext,
+		},
 	}
 
 	es, err := elasticsearch.NewClient(cfg)
@@ -77,11 +83,7 @@ func NewElasticSearchClient(ctx context.Context, addresses []string, username, p
 		sampler:   sampler,
 	}
 
-	err = client.Ping(ctx)
-	if err != nil {
-		log.Fatalf("Error get elasticsearch info: %v", err)
-	}
-
+	log.Info("Preparing elasticsearch index")
 	err = client.Prepare(ctx)
 	if err != nil {
 		log.Fatalf("Error preparing storage :%v", err)

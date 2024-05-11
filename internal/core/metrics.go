@@ -21,3 +21,7 @@ func (a *Agent) MetricsSave(ctx context.Context, request *MetricsRequest) error 
 func (a *Agent) MetricsIsSampled() bool {
 	return a.metricsStorage.IsSampled()
 }
+
+func (a *Agent) PingMetricsStorage(ctx context.Context) error {
+	return a.metricsStorage.Ping(ctx)
+}

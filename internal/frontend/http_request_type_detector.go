@@ -6,6 +6,21 @@ import (
 	"strings"
 )
 
+// RequestType
+// Определяет тип запроса
+type RequestType string
+
+const (
+	TypeUnknown RequestType = "unknown"
+	TypeService RequestType = "service"
+	TypeLogs    RequestType = "logs"
+	TypeMetrics RequestType = "metrics"
+)
+
+// RequestTypeContextField
+// В какое поле контекста помещать тип запроса
+const RequestTypeContextField = "RequestType"
+
 func (f *HTTPFrontend) DetectRequestTypeMiddleware(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Path

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 // UserIDContextField
@@ -15,29 +14,17 @@ const UserIDContextField = "user_id"
 // Мидлвар для проверки авторизации, определения user ID и записи его в заголовок
 func (f *HTTPFrontend) AuthMiddleware(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		// для подсчета времени выполнения запроса
-		reqStart := time.Now()
-		// статус ответа по умолчанию
-		reqStatus := http.StatusOK
-
 		// Получаем тип запроса из контекста (добавляется в предыдущих middleware)
-		requestType := r.Context().Value(RequestTypeContextField)
+		requestType := r.Context().Value(RequestTypeContextField).(RequestType)
 
-		// Не проверяем аутентификацию для служебных эндпоинтов
-		if requestType == TypeService {
+		// Не проверяем аутентификацию для запросов не на получение логов или метрик
+		if requestType != TypeMetrics && requestType != TypeLogs {
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		authHeader := f.config.Auth.Header
 		allowUnauthorized := f.config.Auth.AllowUnauthorized
-
-		defer func() {
-			f.metrics.incomingRequests.WithLabelValues(
-				fmt.Sprintf("%d", reqStatus),
-				"logs",
-			).Observe(time.Since(reqStart).Seconds())
-		}()
 
 		// Пробуем получить user ID
 		userID, err := f.auth.GetUserID(r.Header.Get(authHeader))
@@ -47,9 +34,8 @@ func (f *HTTPFrontend) AuthMiddleware(next http.Handler) http.Handler {
 
 		// Если запрещены запросы от неавторизованных пользователей и не смогли получить user UD, то возвращаем ошибку
 		if !allowUnauthorized && userID == 0 {
-			reqStatus = http.StatusForbidden
 			f.log.Warnf("Unauthorized requests is forbidden")
-			http.Error(w, "Unauthorized requests is forbidden", reqStatus)
+			http.Error(w, "Unauthorized requests is forbidden", http.StatusForbidden)
 			return
 		}
 

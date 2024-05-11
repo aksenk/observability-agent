@@ -43,3 +43,7 @@ func (a *Agent) LogsSave(ctx context.Context, request *LogsRequest) error {
 func (a *Agent) LogsIsSampled() bool {
 	return a.logsStorage.IsSampled()
 }
+
+func (a *Agent) PingLogsStorage(ctx context.Context) error {
+	return a.logsStorage.Ping(ctx)
+}

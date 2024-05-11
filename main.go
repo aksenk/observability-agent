@@ -25,11 +25,11 @@ TODO list
 + custom metric labels
 + global rate limit for instance
 + rate limit per user (in-memory)
-
++ global prometheus metrics middleware
++ healthcheck
++\- timeouts (в эластике работает странно, фактический таймаут х4 от указанного)
 +\- logger (кривой какой-то)
 
-- global prometheus metrics middleware
-- healthcheck
 - client metrics histogram support
 - circuit breaker
 - distributed rate limit per user (redis)
@@ -129,6 +129,7 @@ func main() {
 			cfg.Storage.Logs.Elastic.User,
 			cfg.Storage.Logs.Elastic.Password,
 			cfg.Storage.Logs.Elastic.Index,
+			cfg.Storage.Logs.Elastic.Timeout,
 			log,
 			logsSampler)
 		if err != nil {
@@ -145,6 +146,7 @@ func main() {
 		metricsStorage, err = metrics_storage.NewVMAgentClient(
 			cfg.Storage.Metrics.Victoria.URL,
 			cfg.Storage.Metrics.Victoria.ExtraLabels,
+			cfg.Storage.Metrics.Victoria.Timeout,
 			log,
 			metricsSampler)
 	default:

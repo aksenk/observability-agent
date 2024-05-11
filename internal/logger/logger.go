@@ -23,6 +23,16 @@ type Logger interface {
 	SetFormatter(formatter string) error
 }
 
+type ExtendedResponseWriter struct {
+	http.ResponseWriter
+	StatusCode int
+}
+
+func (w *ExtendedResponseWriter) WriteHeader(code int) {
+	w.StatusCode = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
 // New
 // Конструктор нового логгера
 func New() Logger {
@@ -114,14 +124,4 @@ func Middleware(logger Logger) func(next http.Handler) http.Handler {
 
 		})
 	}
-}
-
-type ExtendedResponseWriter struct {
-	http.ResponseWriter
-	StatusCode int
-}
-
-func (w *ExtendedResponseWriter) WriteHeader(code int) {
-	w.StatusCode = code
-	w.ResponseWriter.WriteHeader(code)
 }

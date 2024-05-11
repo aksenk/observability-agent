@@ -46,10 +46,11 @@ type LogsConfig struct {
 }
 
 type ElasticSearchConfig struct {
-	URL      string `env:"URL"`
-	Index    string `env:"INDEX"`
-	User     string `env:"USER"`
-	Password string `env:"PASSWORD"`
+	URL      string        `env:"URL"`
+	Index    string        `env:"INDEX"`
+	User     string        `env:"USER"`
+	Password string        `env:"PASSWORD"`
+	Timeout  time.Duration `env:"TIMEOUT, default=10s"`
 }
 
 type MetricsConfig struct {
@@ -61,8 +62,9 @@ type MetricsConfig struct {
 }
 
 type VictoriaMetricsConfig struct {
-	URL         string   `env:"URL"`
-	ExtraLabels []string `env:"EXTRA_LABELS"`
+	URL         string        `env:"URL"`
+	ExtraLabels []string      `env:"EXTRA_LABELS"`
+	Timeout     time.Duration `env:"TIMEOUT, default=10s"`
 }
 
 type AuthConfig struct {

@@ -9,6 +9,7 @@ import (
 	"observability-agent/internal/logger"
 	"observability-agent/internal/sampler"
 	"strings"
+	"time"
 )
 
 // VMAgentClient
@@ -18,6 +19,7 @@ type VMAgentClient struct {
 	log         logger.Logger
 	sampler     *sampler.Sampler
 	extraLabels []string
+	timeout     time.Duration
 }
 
 // IsSampled
@@ -29,6 +31,23 @@ func (c *VMAgentClient) IsSampled() bool {
 // Ping
 // Проверка соединения
 func (c *VMAgentClient) Ping(ctx context.Context) error {
+	client := http.Client{}
+	client.Timeout = c.timeout
+
+	request, err := http.NewRequest(http.MethodGet, c.url, nil)
+	if err != nil {
+		return err
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("unexpected status code: %v", response.StatusCode)
+	}
+
 	return nil
 }
 
@@ -48,8 +67,8 @@ func (c *VMAgentClient) Prepare(ctx context.Context) error {
 // Сохранение логов в хранилище
 func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) error {
 
-	// TODO timeout
 	client := http.Client{}
+	client.Timeout = c.timeout
 
 	extraLabels := ""
 	if c.extraLabels != nil {
@@ -83,7 +102,7 @@ func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) 
 
 // NewVMAgentClient
 // Конструктор для VMAgentClient
-func NewVMAgentClient(url string, extraLabels []string, log logger.Logger, sampler *sampler.Sampler) (*VMAgentClient, error) {
+func NewVMAgentClient(url string, extraLabels []string, timeout time.Duration, log logger.Logger, sampler *sampler.Sampler) (*VMAgentClient, error) {
 	if url == "" {
 		return nil, fmt.Errorf("url is empty")
 	}
@@ -93,5 +112,6 @@ func NewVMAgentClient(url string, extraLabels []string, log logger.Logger, sampl
 		log:         log,
 		sampler:     sampler,
 		extraLabels: extraLabels,
+		timeout:     timeout,
 	}, nil
 }

@@ -13,17 +13,6 @@ import (
 	"observability-agent/internal/logger"
 )
 
-type RequestType int
-
-const (
-	TypeUnknown RequestType = iota
-	TypeService RequestType = iota
-	TypeLogs    RequestType = iota
-	TypeMetrics RequestType = iota
-)
-
-const RequestTypeContextField = "RequestType"
-
 // HTTPFrontend
 // Реализация HTTP фронтенда
 type HTTPFrontend struct {
@@ -47,9 +36,11 @@ func (f *HTTPFrontend) Start() error {
 	r.Use(middleware.Timeout(f.config.Server.Timeout))
 	r.Use(logger.Middleware(f.log))
 	r.Use(f.DetectRequestTypeMiddleware)
+	r.Use(f.PrometheusMetricsMiddleware)
 	r.Use(f.AuthMiddleware)
 	r.Use(f.LimiterMiddleware(f.globalLimiter, f.perUserLimiterLogs, f.perUserLimiterMetrics))
 	r.Handle("/metrics", promhttp.Handler())
+	r.Get("/healthcheck", f.HealthcheckHandler)
 
 	r.Route("/api/v1/", func(r chi.Router) {
 		r.Post("/logs/elasticsearch/bulk", f.logsReceiverHandler)

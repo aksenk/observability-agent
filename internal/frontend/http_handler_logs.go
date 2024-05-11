@@ -1,62 +1,43 @@
 package frontend
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"observability-agent/internal/core"
-	"time"
 )
 
 // logsReceiverHandler
 // Обработчик запроса на получение логов
 func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Request) {
-	// для подсчета времени выполнения запроса
-	reqStart := time.Now()
-	// статус ответа по умолчанию
-	reqStatus := http.StatusOK
-
 	ctx := r.Context()
-
-	// по завершении запроса регистрируем метрику
-	defer func() {
-		f.metrics.incomingRequests.WithLabelValues(
-			fmt.Sprintf("%d", reqStatus),
-			"logs",
-		).Observe(time.Since(reqStart).Seconds())
-	}()
 
 	// Пробуем получить user ID из заголовка (добавляется в middleware)
 	userID, err := GetUserID(r)
 	if err != nil {
 		f.log.Error("Error getting user ID: %v", err)
-		reqStatus = http.StatusInternalServerError
-		http.Error(w, "Error getting user ID", reqStatus)
+		http.Error(w, "Error getting user ID", http.StatusInternalServerError)
 		return
 	}
 
 	// проверяем, нужно ли отбросить запрос на основе семплирования
 	if f.agent.LogsIsSampled() {
 		f.log.Debugf("Logs request are sampled")
-		reqStatus = http.StatusTooManyRequests
-		http.Error(w, "Logs request are sampled", reqStatus)
+		http.Error(w, "Logs request are sampled", http.StatusTooManyRequests)
 		return
 	}
 
 	// Сразу проверяем что заявленный размер запроса не превышает максимально допустимый
 	if r.ContentLength > f.config.Storage.Logs.MaximumBytesSize {
-		reqStatus = http.StatusRequestEntityTooLarge
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
-		http.Error(w, "Request is too big", reqStatus)
+		http.Error(w, "Request is too big", http.StatusRequestEntityTooLarge)
 		return
 	}
 
 	// Вычитываем контент запроса
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error reading body: %v", err)
-		http.Error(w, "Error reading body", reqStatus)
+		http.Error(w, "Error reading body", http.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
@@ -70,9 +51,8 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 
 	// Если фактический размер запроса превышает максимально разрешенный размер, то возвращаем ошибку
 	if int64(len(body)) > f.config.Storage.Logs.MaximumBytesSize {
-		reqStatus = http.StatusRequestEntityTooLarge
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
-		http.Error(w, "Request is too big", reqStatus)
+		http.Error(w, "Request is too big", http.StatusRequestEntityTooLarge)
 		return
 	}
 
@@ -90,13 +70,12 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 	// Сохраняем полученные данные
 	err = f.agent.LogsSave(ctx, request)
 	if err != nil {
-		reqStatus = http.StatusInternalServerError
 		f.log.Errorf("Error receiving request: %v", err)
-		http.Error(w, "Error receiving request", reqStatus)
+		http.Error(w, "Error receiving request", http.StatusInternalServerError)
 		return
 	}
 
 	w.Write([]byte("Logs received successfully\n"))
-	w.WriteHeader(reqStatus)
+	w.WriteHeader(http.StatusOK)
 	return
 }
