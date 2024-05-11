@@ -6,27 +6,33 @@ import (
 	"observability-agent/internal/config"
 	"observability-agent/internal/core"
 	"observability-agent/internal/frontend"
+	"observability-agent/internal/limiter"
 	"observability-agent/internal/logger"
 	"observability-agent/internal/logs_storage"
 	"observability-agent/internal/metrics_storage"
 	"observability-agent/internal/sampler"
+	"os"
 )
 
 /*
 TODO list
 + receiving metrics
 + receiving logs
-+ logger
 + sampling
 + jwt
 + prometheus metrics
 + add user label to metrics from jwt
 + custom metric labels
++ global rate limit for instance
++ rate limit per user (in-memory)
 
++\- logger (кривой какой-то)
+
+- global prometheus metrics middleware
+- healthcheck
 - client metrics histogram support
 - circuit breaker
-- distributed rate limit per user
-- rate limit for instance
+- distributed rate limit per user (redis)
 - opentelemetry metrics?
 - logs contract + validation
 - metrics contract + validation
@@ -41,8 +47,13 @@ func main() {
 	// Инициализация логгера.
 	log := logger.New()
 
+	useLocalEnvFile := os.Getenv("USE_LOCAL_ENV_FILE")
+	if useLocalEnvFile == "true" {
+		log.Info("Read environment variables from .env file")
+	}
+
 	// Инициализация конфига.
-	cfg, err := config.Get(ctx)
+	cfg, err := config.Get(ctx, useLocalEnvFile)
 	if err != nil {
 		log.Fatalf("Error init config: %v", err)
 	}
@@ -62,47 +73,82 @@ func main() {
 	}
 
 	// Инициализация механизма семплирования для логов
-	logsSampler, err := sampler.New(cfg.Logs.SamplingRate)
+	logsSampler, err := sampler.New(cfg.Storage.Logs.SamplingRate)
 	if err != nil {
 		log.Fatalf("Error init logs sampler: %v", err)
 	}
 
 	// Инициализация механизма семплирования для метрик
-	metricsSampler, err := sampler.New(cfg.Metrics.SamplingRate)
+	metricsSampler, err := sampler.New(cfg.Storage.Metrics.SamplingRate)
 	if err != nil {
 		log.Fatalf("Error init metrics sampler: %v", err)
 	}
 
+	// Инициализация глобального ограничителя запросов
+	globalRateLimiter := limiter.NewGlobalLimiterMiddleware(
+		cfg.Server.GlobalRateLimit.Period,
+		cfg.Server.GlobalRateLimit.Requests)
+	if globalRateLimiter == nil {
+		log.Info("Global rate limiter is not configured")
+	} else {
+		log.Info("Global rate limiter: maximum %v requests per %v",
+			cfg.Server.GlobalRateLimit.Requests, cfg.Server.GlobalRateLimit.Period)
+	}
+
+	// Инициализация ограничителя запросов по пользователям для логов
+	logsRateLimiter := limiter.NewPerUserLimiterMiddleware(
+		cfg.Storage.Logs.PerUserRateLimit.Period,
+		cfg.Storage.Logs.PerUserRateLimit.Requests,
+		frontend.UserIDContextField)
+	if logsRateLimiter == nil {
+		log.Info("Per user logs rate limiter is not configured")
+	} else {
+		log.Info("Per user logs rate limiter: maximum %v requests per %v",
+			cfg.Storage.Logs.PerUserRateLimit.Requests, cfg.Storage.Logs.PerUserRateLimit.Period)
+	}
+
+	// Инициализация ограничителя запросов по пользователям для логов
+	metricsRateLimiter := limiter.NewPerUserLimiterMiddleware(
+		cfg.Storage.Metrics.PerUserRateLimit.Period,
+		cfg.Storage.Metrics.PerUserRateLimit.Requests,
+		frontend.UserIDContextField)
+	if metricsRateLimiter == nil {
+		log.Info("Per user metrics rate limiter is not configured")
+	} else {
+		log.Info("Per user metrics rate limiter: maximum %v requests per %v",
+			cfg.Storage.Metrics.PerUserRateLimit.Requests, cfg.Storage.Metrics.PerUserRateLimit.Period)
+	}
+
 	// Инициализация хранилища для логов.
 	var logsStorage core.LogsStorage
-	switch cfg.Logs.Type {
+	switch cfg.Storage.Logs.Type {
 	case "elasticsearch":
 		logsStorage, err = logs_storage.NewElasticSearchClient(
 			ctx,
-			[]string{cfg.Logs.Elastic.URL},
-			cfg.Logs.Elastic.User,
-			cfg.Logs.Elastic.Password,
-			cfg.Logs.Elastic.Index,
+			[]string{cfg.Storage.Logs.Elastic.URL},
+			cfg.Storage.Logs.Elastic.User,
+			cfg.Storage.Logs.Elastic.Password,
+			cfg.Storage.Logs.Elastic.Index,
 			log,
 			logsSampler)
 		if err != nil {
 			log.Fatalf("Error init log storage: %v", err)
 		}
 	default:
-		log.Fatalf("Unknown logs storage type: %v", cfg.Logs.Type)
+		log.Fatalf("Unknown logs storage type: %v", cfg.Storage.Logs.Type)
 	}
 
 	// Инициализация хранилища для метрик.
 	var metricsStorage core.MetricsStorage
-	switch cfg.Metrics.Type {
+	switch cfg.Storage.Metrics.Type {
 	case "victoriametrics":
 		metricsStorage, err = metrics_storage.NewVMAgentClient(
-			cfg.Metrics.Victoria.URL,
-			cfg.Metrics.Victoria.ExtraLabels,
+			cfg.Storage.Metrics.Victoria.URL,
+			cfg.Storage.Metrics.Victoria.ExtraLabels,
 			log,
 			metricsSampler)
 	default:
-		log.Fatalf("Unknown metrics storage type: %v", cfg.Metrics.Type)
+		log.Fatalf("Unknown metrics storage type: %v", cfg.Storage.Metrics.Type)
 	}
 
 	// Инициализация основного приложения
@@ -112,7 +158,7 @@ func main() {
 	}
 
 	// Инициализация фронтенда для приложения.
-	front, err := frontend.NewHTTP(agent, log, cfg, jwtVerifier)
+	front, err := frontend.NewHTTP(agent, log, cfg, jwtVerifier, globalRateLimiter, metricsRateLimiter, logsRateLimiter)
 	if err != nil {
 		log.Fatalf("Error init frontend: %v", err)
 	}

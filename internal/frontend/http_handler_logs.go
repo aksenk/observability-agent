@@ -27,7 +27,7 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 	}()
 
 	// Пробуем получить user ID из заголовка (добавляется в middleware)
-	userID, err := f.GetUserIDFromHeader(r)
+	userID, err := GetUserID(r)
 	if err != nil {
 		f.log.Error("Error getting user ID: %v", err)
 		reqStatus = http.StatusInternalServerError
@@ -44,7 +44,7 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Сразу проверяем что заявленный размер запроса не превышает максимально допустимый
-	if r.ContentLength > f.config.Logs.MaximumBytesSize {
+	if r.ContentLength > f.config.Storage.Logs.MaximumBytesSize {
 		reqStatus = http.StatusRequestEntityTooLarge
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
 		http.Error(w, "Request is too big", reqStatus)
@@ -69,7 +69,7 @@ func (f *HTTPFrontend) logsReceiverHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Если фактический размер запроса превышает максимально разрешенный размер, то возвращаем ошибку
-	if int64(len(body)) > f.config.Logs.MaximumBytesSize {
+	if int64(len(body)) > f.config.Storage.Logs.MaximumBytesSize {
 		reqStatus = http.StatusRequestEntityTooLarge
 		f.log.Warnf("Request with size %d is too big", r.ContentLength)
 		http.Error(w, "Request is too big", reqStatus)

@@ -53,7 +53,7 @@ func (l *LogrusLogger) SetLevel(level string) error {
 
 func (l *LogrusLogger) SetFormatter(formatter string) error {
 	switch formatter {
-	case "default":
+	case "plain":
 		l.log.SetFormatter(&logrus.TextFormatter{})
 	case "json":
 		l.log.SetFormatter(&logrus.JSONFormatter{})
@@ -106,8 +106,22 @@ func (l *LogrusLogger) Fatalf(format string, args ...interface{}) {
 func Middleware(logger Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger.Debugf("Request: %s %s", r.Method, r.URL.Path)
-			next.ServeHTTP(w, r)
+			erw := &ExtendedResponseWriter{
+				ResponseWriter: w,
+			}
+			next.ServeHTTP(erw, r)
+			logger.Infof("Request: %v %v, status: %v", r.Method, r.URL.Path, erw.StatusCode)
+
 		})
 	}
+}
+
+type ExtendedResponseWriter struct {
+	http.ResponseWriter
+	StatusCode int
+}
+
+func (w *ExtendedResponseWriter) WriteHeader(code int) {
+	w.StatusCode = code
+	w.ResponseWriter.WriteHeader(code)
 }

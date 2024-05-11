@@ -2,34 +2,47 @@ package config
 
 import (
 	"context"
+	"fmt"
+	"github.com/joho/godotenv"
 	"github.com/sethvargo/go-envconfig"
 	"time"
 )
 
 type Config struct {
 	Server  ServerConfig  `env:", prefix=SERVER_"`
-	Logs    LogsConfig    `env:", prefix=LOGS_"`
-	Metrics MetricsConfig `env:", prefix=METRICS_"`
+	Storage StorageConfig `env:", prefix=STORAGE_"`
 	Auth    AuthConfig    `env:", prefix=AUTH_"`
 	Log     LogConfig     `env:", prefix=LOG_"`
 }
 
+type RateLimitConfig struct {
+	Requests int64         `env:"REQUESTS, default=0"`
+	Period   time.Duration `env:"PERIOD, default=1s"`
+}
+
+type StorageConfig struct {
+	Logs    LogsConfig    `env:", prefix=LOGS_"`
+	Metrics MetricsConfig `env:", prefix=METRICS_"`
+}
+
 type LogConfig struct {
 	Level string `env:"LEVEL, default=info"`
-	Type  string `env:"TYPE, default=default"`
+	Type  string `env:"TYPE, default=plain"`
 }
 
 type ServerConfig struct {
-	Host    string        `env:"HOST, default=0.0.0.0"`
-	Port    int           `env:"PORT, default=8080"`
-	Timeout time.Duration `env:"TIMEOUT, default=10s"`
+	Host            string          `env:"HOST, default=0.0.0.0"`
+	Port            int             `env:"PORT, default=8080"`
+	Timeout         time.Duration   `env:"TIMEOUT, default=10s"`
+	GlobalRateLimit RateLimitConfig `env:", prefix=GLOBAL_RATE_LIMIT_"`
 }
 
 type LogsConfig struct {
 	Type             string              `env:"TYPE, default=elasticsearch"`
 	Elastic          ElasticSearchConfig `env:", prefix=ELASTIC_"`
-	MaximumBytesSize int64               `env:"MAXIMUM_BYTES_SIZE, default=5242880"` // 5 megabytes
+	MaximumBytesSize int64               `env:"MAXIMUM_BYTES_SIZE, default=5242880"` // 5 мегабайт
 	SamplingRate     float64             `env:"SAMPLING_RATE, default=1.0"`          // 1.0 означает приём 100% трафика
+	PerUserRateLimit RateLimitConfig     `env:", prefix=PER_USER_RATE_LIMIT_"`
 }
 
 type ElasticSearchConfig struct {
@@ -44,6 +57,7 @@ type MetricsConfig struct {
 	Victoria         VictoriaMetricsConfig `env:", prefix=VICTORIA_"`
 	MaximumBytesSize int64                 `env:"MAXIMUM_BYTES_SIZE, default=5242880"` // 5 megabytes
 	SamplingRate     float64               `env:"SAMPLING_RATE, default=1.0"`          // 1.0 означает приём 100% трафика
+	PerUserRateLimit RateLimitConfig       `env:", prefix=PER_USER_RATE_LIMIT_"`
 }
 
 type VictoriaMetricsConfig struct {
@@ -57,8 +71,17 @@ type AuthConfig struct {
 	Header            string `env:"HEADER, default=x-access-token"`
 }
 
-func Get(ctx context.Context) (*Config, error) {
+func Get(ctx context.Context, useLocalEnvFile string) (*Config, error) {
 	var c Config
+
+	if useLocalEnvFile == "true" {
+		// Загрузка переменных окружения из файла .env
+		if err := godotenv.Load(); err != nil {
+			return nil, fmt.Errorf("error loading .env file: %v", err)
+		}
+	}
+
 	err := envconfig.Process(ctx, &c)
+	envconfig.OsLookuper()
 	return &c, err
 }

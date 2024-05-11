@@ -2,7 +2,8 @@
 
 SECRET_KEY="your_secret_key_here"
 
-export USER_ID=666
+USER_ID_FROM_ARG=$1
+export USER_ID=${USER_ID_FROM_ARG:=666}
 export SESSION_ID=kek-fek-gek
 export IAT=$(date +%s)
 export EXP=$(date -v +1d +%s)

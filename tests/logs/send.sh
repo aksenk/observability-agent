@@ -3,7 +3,9 @@
 set -e
 
 LOG_FILE="_logs"
-USER_ID="111"
+
+USER_ID_FROM_ARG=$1
+USER_ID=${USER_ID_FROM_ARG:=111}
 
 JWT="$(bash ../jwt_generator/generate.sh)"
 
@@ -30,7 +32,7 @@ cat $LOG_FILE | gzip > ${LOG_FILE}.gz
 #echo
 
 echo "Sending gzip logs with gzip header"
-curl -i -H "x-access-token: $(bash ../jwt_generator/generate.sh)" -XPOST -H 'Content-Encoding: gzip' -T ${LOG_FILE}.gz \
+curl -i -H "x-access-token: $(bash ../jwt_generator/generate.sh $USER_ID)" -XPOST -H 'Content-Encoding: gzip' -T ${LOG_FILE}.gz \
   'http://localhost:8080/api/v1/logs/elasticsearch/bulk'
 echo
 
