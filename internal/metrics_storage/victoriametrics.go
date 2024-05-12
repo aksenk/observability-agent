@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"observability-agent/internal/config"
 	"observability-agent/internal/core"
 	"observability-agent/internal/logger"
 	"observability-agent/internal/sampler"
@@ -15,11 +16,11 @@ import (
 // VMAgentClient
 // Клиент для работы с victoriametrics agent
 type VMAgentClient struct {
-	url         string
-	log         logger.Logger
-	sampler     *sampler.Sampler
-	extraLabels []string
-	timeout     time.Duration
+	client  *http.Client
+	url     string
+	log     logger.Logger
+	sampler *sampler.Sampler
+	timeout time.Duration
 }
 
 // IsSampled
@@ -67,19 +68,11 @@ func (c *VMAgentClient) Prepare(ctx context.Context) error {
 // Сохранение логов в хранилище
 func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) error {
 
-	client := http.Client{}
-	client.Timeout = c.timeout
+	URL := fmt.Sprintf("%v%v", c.url, metrics.UserID)
 
-	extraLabels := ""
-	if c.extraLabels != nil {
-		extraLabels = fmt.Sprintf("&extra_label=%v", strings.Join(c.extraLabels, "&extra_label="))
-	}
+	c.log.Debugf("URL = %v", URL)
 
-	url := fmt.Sprintf("%v?extra_label=gambler_id=%v%v", c.url, metrics.UserID, extraLabels)
-
-	c.log.Debugf("url: %v", url)
-
-	request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(metrics.Data))
+	request, err := http.NewRequest(http.MethodPost, URL, bytes.NewReader(metrics.Data))
 	if err != nil {
 		return err
 	}
@@ -88,7 +81,7 @@ func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) 
 		request.Header.Set("Content-Encoding", "gzip")
 	}
 
-	response, err := client.Do(request)
+	response, err := c.client.Do(request)
 	if err != nil {
 		return err
 	}
@@ -102,16 +95,33 @@ func (c *VMAgentClient) Save(ctx context.Context, metrics *core.MetricsRequest) 
 
 // NewVMAgentClient
 // Конструктор для VMAgentClient
-func NewVMAgentClient(url string, extraLabels []string, timeout time.Duration, log logger.Logger, sampler *sampler.Sampler) (*VMAgentClient, error) {
-	if url == "" {
+func NewVMAgentClient(vmConfig *config.VictoriaMetricsConfig, log logger.Logger, sampler *sampler.Sampler) (*VMAgentClient, error) {
+	if vmConfig.URL == "" {
 		return nil, fmt.Errorf("url is empty")
 	}
-	// TODO добавить поддержку extra labels
+	if vmConfig.Timeout.Seconds() <= 0 {
+		return nil, fmt.Errorf("incorrect timeout: %v", vmConfig.Timeout)
+	}
+
+	var URL string
+	// Добавляем в URL дополнительные лейблы, указанные в конфиге
+	// и дополнительный лейбл gambler_id, который будет добавляться к каждому запросу,
+	// но значение этого лейбла будет подставляться только при отправке запроса
+	extraLabels := ""
+	if vmConfig.ExtraLabels != nil {
+		extraLabels = fmt.Sprintf("?extra_label=%v", strings.Join(vmConfig.ExtraLabels, "&extra_label="))
+		URL = fmt.Sprintf("%v%v&extra_label=gambler_id=", vmConfig.URL, extraLabels)
+	} else {
+		URL = fmt.Sprintf("%v?extra_label=gambler_id=", vmConfig.URL)
+	}
+
 	return &VMAgentClient{
-		url:         url,
-		log:         log,
-		sampler:     sampler,
-		extraLabels: extraLabels,
-		timeout:     timeout,
+		client: &http.Client{
+			Timeout: vmConfig.Timeout,
+		},
+		url:     URL,
+		log:     log,
+		sampler: sampler,
+		timeout: vmConfig.Timeout,
 	}, nil
 }

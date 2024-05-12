@@ -31,10 +31,13 @@ type LogConfig struct {
 }
 
 type ServerConfig struct {
-	Host            string          `env:"HOST, default=0.0.0.0"`
-	Port            int             `env:"PORT, default=8080"`
-	Timeout         time.Duration   `env:"TIMEOUT, default=10s"`
-	GlobalRateLimit RateLimitConfig `env:", prefix=GLOBAL_RATE_LIMIT_"`
+	Host              string          `env:"HOST, default=0.0.0.0"`
+	Port              string          `env:"PORT, default=8080"`
+	WriteTimeout      time.Duration   `env:"WRITE_TIMEOUT, default=10s"`
+	ReadTimeout       time.Duration   `env:"READ_TIMEOUT, default=10s"`
+	IdleTimeout       time.Duration   `env:"IDLE_TIMEOUT, default=120s"`
+	ReadHeaderTimeout time.Duration   `env:"READ_HEADER_TIMEOUT, default=10s"`
+	GlobalRateLimit   RateLimitConfig `env:", prefix=GLOBAL_RATE_LIMIT_"`
 }
 
 type LogsConfig struct {
@@ -46,11 +49,13 @@ type LogsConfig struct {
 }
 
 type ElasticSearchConfig struct {
-	URL      string        `env:"URL"`
-	Index    string        `env:"INDEX"`
-	User     string        `env:"USER"`
-	Password string        `env:"PASSWORD"`
-	Timeout  time.Duration `env:"TIMEOUT, default=10s"`
+	Addresses              []string      `env:"ADDRESSES"`
+	Index                  string        `env:"INDEX"`
+	User                   string        `env:"USER"`
+	Password               string        `env:"PASSWORD"`
+	Timeout                time.Duration `env:"TIMEOUT, default=10s"`
+	CreateIndex            bool          `env:"CREATE_INDEX, default=true"`
+	StartupCheckConnection bool          `env:"STARTUP_CHECK_CONNECTION, default=true"`
 }
 
 type MetricsConfig struct {

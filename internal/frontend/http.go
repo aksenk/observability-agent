@@ -1,11 +1,13 @@
 package frontend
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
+	"log"
 	"net/http"
 	"observability-agent/internal/auth"
 	"observability-agent/internal/config"
@@ -16,6 +18,7 @@ import (
 // HTTPFrontend
 // Реализация HTTP фронтенда
 type HTTPFrontend struct {
+	server                *http.Server
 	log                   logger.Logger
 	agent                 *core.Agent
 	config                *config.Config
@@ -26,14 +29,9 @@ type HTTPFrontend struct {
 	perUserLimiterMetrics *stdlib.Middleware
 }
 
-// Start
-// Запуск HTTP фронтенда
-func (f *HTTPFrontend) Start() error {
-	f.metrics = PreparePrometheusMetrics()
-
+func (f *HTTPFrontend) prepareRouter() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(f.config.Server.Timeout))
 	r.Use(logger.Middleware(f.log))
 	r.Use(f.DetectRequestTypeMiddleware)
 	r.Use(f.PrometheusMetricsMiddleware)
@@ -46,8 +44,28 @@ func (f *HTTPFrontend) Start() error {
 		r.Post("/logs/elasticsearch/bulk", f.logsReceiverHandler)
 		r.Put("/metrics/victoriametrics/import", f.metricsReceiverHandler)
 	})
-	f.log.Info("Starting agent")
-	return http.ListenAndServe(fmt.Sprintf("%v:%v", f.config.Server.Host, f.config.Server.Port), r)
+	return r
+}
+
+// Start
+// Запуск HTTP фронтенда
+func (f *HTTPFrontend) Start(ctx context.Context) {
+	f.metrics = PreparePrometheusMetrics()
+	f.server.Handler = f.prepareRouter()
+
+	f.log.Info("Starting web server")
+
+	err := f.server.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("Error start frontend: %v", err)
+	}
+}
+
+// Stop
+// Остановка HTTP фронтенда
+func (f *HTTPFrontend) Stop(ctx context.Context) error {
+	err := f.server.Shutdown(ctx)
+	return err
 }
 
 // NewHTTP
@@ -59,7 +77,17 @@ func NewHTTP(agent *core.Agent,
 	globalLimiter, perUserLimiterMetrics, perUserLimiterLogs *stdlib.Middleware,
 ) (Frontend, error) {
 	var front Frontend
+
+	server := &http.Server{
+		Addr:              cfg.Server.Host + ":" + cfg.Server.Port,
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		IdleTimeout:       cfg.Server.IdleTimeout,
+		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
+	}
+
 	front = &HTTPFrontend{
+		server:                server,
 		agent:                 agent,
 		log:                   log,
 		config:                cfg,

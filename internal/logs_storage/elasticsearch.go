@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
 	"net/http"
+	"observability-agent/internal/config"
 	"observability-agent/internal/core"
 	"observability-agent/internal/logger"
 	"observability-agent/internal/sampler"
-	"time"
 )
 
 // ElasticSearchClient
@@ -47,26 +47,26 @@ type ElasticSearchDocumentPayload struct {
 
 // NewElasticSearchClient
 // Конструктор для ElasticSearchClient
-func NewElasticSearchClient(ctx context.Context, addresses []string, username, password, indexName string, timeout time.Duration, log logger.Logger, sampler *sampler.Sampler) (*ElasticSearchClient, error) {
-	if len(addresses) == 0 || addresses[0] == "" {
+func NewElasticSearchClient(ctx context.Context, esConfig *config.ElasticSearchConfig, log logger.Logger, sampler *sampler.Sampler) (*ElasticSearchClient, error) {
+	if len(esConfig.Addresses) == 0 {
 		return nil, fmt.Errorf("addresses is not defined")
 	}
-	if username == "" {
+	if esConfig.User == "" {
 		return nil, fmt.Errorf("username is not defined")
 	}
-	if password == "" {
+	if esConfig.Password == "" {
 		return nil, fmt.Errorf("password is not defined")
 	}
-	if indexName == "" {
+	if esConfig.Index == "" {
 		return nil, fmt.Errorf("index name is not defined")
 	}
 
 	cfg := elasticsearch.Config{
-		Addresses: addresses,
-		Username:  username,
-		Password:  password,
+		Addresses: esConfig.Addresses,
+		Username:  esConfig.User,
+		Password:  esConfig.Password,
 		Transport: &http.Transport{
-			ResponseHeaderTimeout: timeout,
+			ResponseHeaderTimeout: esConfig.Timeout,
 			//DialContext:           (&net.Dialer{Timeout: time.Second}).DialContext,
 		},
 	}
@@ -78,15 +78,25 @@ func NewElasticSearchClient(ctx context.Context, addresses []string, username, p
 
 	client := &ElasticSearchClient{
 		client:    es,
-		indexName: indexName,
+		indexName: esConfig.Index,
 		log:       log,
 		sampler:   sampler,
 	}
 
-	log.Info("Preparing elasticsearch index")
-	err = client.Prepare(ctx)
-	if err != nil {
-		log.Fatalf("Error preparing storage :%v", err)
+	if esConfig.CreateIndex {
+		log.Info("Preparing elasticsearch index")
+		err = client.Prepare(ctx)
+		if err != nil {
+			log.Fatalf("Error preparing storage :%v", err)
+		}
+	}
+
+	if esConfig.StartupCheckConnection {
+		log.Info("Startup checking elasticsearch connection")
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error checking connection: %v", err)
+		}
 	}
 
 	return client, nil

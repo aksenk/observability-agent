@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"observability-agent/internal/auth"
 	"observability-agent/internal/config"
 	"observability-agent/internal/core"
@@ -12,6 +13,9 @@ import (
 	"observability-agent/internal/metrics_storage"
 	"observability-agent/internal/sampler"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 /*
@@ -27,12 +31,12 @@ TODO list
 + rate limit per user (in-memory)
 + global prometheus metrics middleware
 + healthcheck
++ graceful shutdown
 +\- timeouts (в эластике работает странно, фактический таймаут х4 от указанного)
 +\- logger (кривой какой-то)
 
 - distributed rate limit per user (redis)
 - circuit breaker
-- graceful shutdown
 - client metrics histogram support
 - open telemetry metrics?
 - logs contract + validation
@@ -42,7 +46,10 @@ TODO list
 */
 
 func main() {
-	ctx := context.Background()
+	ctx, stopCtx := context.WithCancel(context.Background())
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
 	// Инициализация логгера.
 	log := logger.New()
@@ -125,15 +132,11 @@ func main() {
 	case "elasticsearch":
 		logsStorage, err = logs_storage.NewElasticSearchClient(
 			ctx,
-			[]string{cfg.Storage.Logs.Elastic.URL},
-			cfg.Storage.Logs.Elastic.User,
-			cfg.Storage.Logs.Elastic.Password,
-			cfg.Storage.Logs.Elastic.Index,
-			cfg.Storage.Logs.Elastic.Timeout,
+			&cfg.Storage.Logs.Elastic,
 			log,
 			logsSampler)
 		if err != nil {
-			log.Fatalf("Error init log storage: %v", err)
+			log.Fatalf("Error init elastic storage: %v", err)
 		}
 	default:
 		log.Fatalf("Unknown logs storage type: %v", cfg.Storage.Logs.Type)
@@ -144,11 +147,12 @@ func main() {
 	switch cfg.Storage.Metrics.Type {
 	case "victoriametrics":
 		metricsStorage, err = metrics_storage.NewVMAgentClient(
-			cfg.Storage.Metrics.Victoria.URL,
-			cfg.Storage.Metrics.Victoria.ExtraLabels,
-			cfg.Storage.Metrics.Victoria.Timeout,
+			&cfg.Storage.Metrics.Victoria,
 			log,
 			metricsSampler)
+		if err != nil {
+			log.Fatalf("Error init victoria metrics storage: %v", err)
+		}
 	default:
 		log.Fatalf("Unknown metrics storage type: %v", cfg.Storage.Metrics.Type)
 	}
@@ -165,9 +169,35 @@ func main() {
 		log.Fatalf("Error init frontend: %v", err)
 	}
 
+	go func() {
+		<-signals
+		log.Info("Starting graceful shutdown")
+
+		// контекст для graceful shutdown
+		shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		// если таймаут истек, то завершаем приложение с ошибкой
+		go func() {
+			<-shutdownCtx.Done()
+			if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
+				log.Fatal("Graceful shutdown timeout. Forcing exit")
+			}
+		}()
+
+		// специально переобъявляем эту переменную, что избежать возможного data race с такой же переменной с основной функции
+		if err := front.Stop(shutdownCtx); err != nil {
+			log.Fatalf("Shutdown error: %v", err)
+		}
+		log.Info("Graceful shutdown completed")
+
+		stopCtx()
+	}()
+
 	// Старт фронтенда.
-	err = front.Start()
-	if err != nil {
-		log.Fatalf("Error start frontend: %v", err)
-	}
+	go front.Start(ctx)
+
+	<-ctx.Done()
+
+	log.Info("Application is stopped")
 }
