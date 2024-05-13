@@ -38,6 +38,7 @@ TODO list
 +\- logger (кривой какой-то)
 
 - circuit breaker
+- prometheus metrics for storage requests
 - client metrics histogram support
 - open telemetry metrics?
 - logs contract + validation
