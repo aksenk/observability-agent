@@ -15,7 +15,7 @@ type LogsRequest struct {
 
 // LogsSave
 // Сохранение логов в хранилище
-func (a *Agent) LogsSave(ctx context.Context, request *LogsRequest) error {
+func (a *App) LogsSave(ctx context.Context, request *LogsRequest) error {
 	// Проверяем что данные не закодированы, если нет заголовка 'Content-Encoding: gzip'
 	if isGzipped(request.Data) && !request.Gzip {
 		return fmt.Errorf("request body is gzipped but header 'Content-Encoding: gzip' is not exist")
@@ -40,10 +40,10 @@ func (a *Agent) LogsSave(ctx context.Context, request *LogsRequest) error {
 
 // LogsIsSampled
 // Проверка на семлирование (допуск только определенного процента трафика). Возвращает true если запрос должен быть отброшен
-func (a *Agent) LogsIsSampled() bool {
+func (a *App) LogsIsSampled() bool {
 	return a.logsStorage.IsSampled()
 }
 
-func (a *Agent) PingLogsStorage(ctx context.Context) error {
+func (a *App) PingLogsStorage(ctx context.Context) error {
 	return a.logsStorage.Ping(ctx)
 }

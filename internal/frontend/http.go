@@ -20,7 +20,7 @@ import (
 type HTTPFrontend struct {
 	server                *http.Server
 	log                   logger.Logger
-	agent                 *core.Agent
+	agent                 *core.App
 	config                *config.Config
 	metrics               *PromMetrics
 	auth                  auth.Verifier
@@ -70,7 +70,7 @@ func (f *HTTPFrontend) Stop(ctx context.Context) error {
 
 // NewHTTP
 // Конструктор HTTPFrontend
-func NewHTTP(agent *core.Agent,
+func NewHTTP(agent *core.App,
 	log logger.Logger,
 	cfg *config.Config,
 	auth auth.Verifier,

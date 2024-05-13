@@ -24,17 +24,17 @@ type MetricsStorage interface {
 	IsSampled() bool
 }
 
-// Agent
+// App
 // Объект основного приложения, содержит в себе методы для работы с входящими логами и метриками
-type Agent struct {
+type App struct {
 	metricsStorage MetricsStorage
 	logsStorage    LogsStorage
 }
 
-// NewAgent
-// Конструктор для объекта Agent
-func NewAgent(metricsStorage MetricsStorage, logsStorage LogsStorage) (*Agent, error) {
-	return &Agent{
+// NewApp
+// Конструктор для объекта App
+func NewApp(metricsStorage MetricsStorage, logsStorage LogsStorage) (*App, error) {
+	return &App{
 		metricsStorage: metricsStorage,
 		logsStorage:    logsStorage,
 	}, nil

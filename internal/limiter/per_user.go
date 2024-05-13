@@ -1,18 +1,19 @@
 package limiter
 
 import (
+	"github.com/redis/go-redis/v9"
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
-	"github.com/ulule/limiter/v3/drivers/store/memory"
+	redisLimiterDriver "github.com/ulule/limiter/v3/drivers/store/redis"
 	"net/http"
 	"observability-agent/internal/frontend"
 	"time"
 )
 
-func NewPerUserLimiterMiddleware(period time.Duration, limit int64, key string) *stdlib.Middleware {
+func NewPerUserLimiterMiddleware(period time.Duration, limit int64, redisClient *redis.Client) (*stdlib.Middleware, error) {
 	// Если лимит выставлен в 0, то считаем, что ограничение запросов не требуется
 	if limit == 0 {
-		return nil
+		return nil, nil
 	}
 
 	rate := limiter.Rate{
@@ -20,8 +21,12 @@ func NewPerUserLimiterMiddleware(period time.Duration, limit int64, key string) 
 		Limit:  limit,
 	}
 
-	// Храним в памяти
-	store := memory.NewStore()
+	// Храним в redis
+	store, err := redisLimiterDriver.NewStore(redisClient)
+	if err != nil {
+		return nil, err
+	}
+
 	instance := limiter.New(store, rate)
 	middleware := stdlib.NewMiddleware(instance)
 
@@ -35,7 +40,7 @@ func NewPerUserLimiterMiddleware(period time.Duration, limit int64, key string) 
 	// Указываем свой обработчик для ситуаций превышения количества запросов
 	middleware.OnLimitReached = UserLimitReachedHandler
 
-	return middleware
+	return middleware, nil
 }
 
 func UserLimitReachedHandler(w http.ResponseWriter, r *http.Request) {

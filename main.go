@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/redis/go-redis/v9"
 	"observability-agent/internal/auth"
 	"observability-agent/internal/config"
 	"observability-agent/internal/core"
@@ -26,16 +27,16 @@ TODO list
 + jwt
 + prometheus metrics
 + add user label to metrics from jwt
-+ custom metric labels
++ metric custom extra labels from config
 + global rate limit for instance
 + rate limit per user (in-memory)
++ distributed rate limit per user (redis)
 + global prometheus metrics middleware
 + healthcheck
 + graceful shutdown
 +\- timeouts (в эластике работает странно, фактический таймаут х4 от указанного)
 +\- logger (кривой какой-то)
 
-- distributed rate limit per user (redis)
 - circuit breaker
 - client metrics histogram support
 - open telemetry metrics?
@@ -79,19 +80,19 @@ func main() {
 		log.Fatalf("Error init jwt verifier: %v", err)
 	}
 
-	// Инициализация механизма семплирования для логов
+	// Инициализация механизма семплирования (приём только определенного % трафика) для логов
 	logsSampler, err := sampler.New(cfg.Storage.Logs.SamplingRate)
 	if err != nil {
 		log.Fatalf("Error init logs sampler: %v", err)
 	}
 
-	// Инициализация механизма семплирования для метрик
+	// Инициализация механизма семплирования (приём только определенного % трафика) для метрик
 	metricsSampler, err := sampler.New(cfg.Storage.Metrics.SamplingRate)
 	if err != nil {
 		log.Fatalf("Error init metrics sampler: %v", err)
 	}
 
-	// Инициализация глобального ограничителя запросов
+	// Инициализация локального ограничителя запросов для инстанса приложения
 	globalRateLimiter := limiter.NewGlobalLimiterMiddleware(
 		cfg.Server.GlobalRateLimit.Period,
 		cfg.Server.GlobalRateLimit.Requests)
@@ -102,11 +103,25 @@ func main() {
 			cfg.Server.GlobalRateLimit.Requests, cfg.Server.GlobalRateLimit.Period)
 	}
 
-	// Инициализация ограничителя запросов по пользователям для логов
-	logsRateLimiter := limiter.NewPerUserLimiterMiddleware(
+	// Инициализация redis для распределенного ограничителя запросов по пользователям
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password, // no password set
+		DB:       cfg.Redis.DB,       // use default DB
+	})
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Error init redis: %v", err)
+	}
+
+	// Инициализация распределенного (синхронизация через redis для всех инстансов приложения)
+	// ограничителя запросов по пользователям для логов
+	logsRateLimiter, err := limiter.NewPerUserLimiterMiddleware(
 		cfg.Storage.Logs.PerUserRateLimit.Period,
 		cfg.Storage.Logs.PerUserRateLimit.Requests,
-		frontend.UserIDContextField)
+		rdb)
+	if err != nil {
+		log.Fatalf("Error init logs rate limiter: %v", err)
+	}
 	if logsRateLimiter == nil {
 		log.Info("Per user logs rate limiter is not configured")
 	} else {
@@ -114,11 +129,15 @@ func main() {
 			cfg.Storage.Logs.PerUserRateLimit.Requests, cfg.Storage.Logs.PerUserRateLimit.Period)
 	}
 
-	// Инициализация ограничителя запросов по пользователям для логов
-	metricsRateLimiter := limiter.NewPerUserLimiterMiddleware(
+	// Инициализация распределенного (синхронизация через redis для всех инстансов приложения)
+	// ограничителя запросов по пользователям для метрик
+	metricsRateLimiter, err := limiter.NewPerUserLimiterMiddleware(
 		cfg.Storage.Metrics.PerUserRateLimit.Period,
 		cfg.Storage.Metrics.PerUserRateLimit.Requests,
-		frontend.UserIDContextField)
+		rdb)
+	if err != nil {
+		log.Fatalf("Error init metrics rate limiter: %v", err)
+	}
 	if metricsRateLimiter == nil {
 		log.Info("Per user metrics rate limiter is not configured")
 	} else {
@@ -158,7 +177,7 @@ func main() {
 	}
 
 	// Инициализация основного приложения
-	agent, err := core.NewAgent(metricsStorage, logsStorage)
+	agent, err := core.NewApp(metricsStorage, logsStorage)
 	if err != nil {
 		log.Fatalf("Error init agent: %v", err)
 	}

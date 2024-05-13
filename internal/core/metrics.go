@@ -12,16 +12,16 @@ type MetricsRequest struct {
 
 // MetricsSave
 // Сохранение метрик в хранилище
-func (a *Agent) MetricsSave(ctx context.Context, request *MetricsRequest) error {
+func (a *App) MetricsSave(ctx context.Context, request *MetricsRequest) error {
 	return a.metricsStorage.Save(ctx, request)
 }
 
 // MetricsIsSampled
 // Проверка на семлирование (допуск только определенного процента трафика). Возвращает true если запрос должен быть отброшен
-func (a *Agent) MetricsIsSampled() bool {
+func (a *App) MetricsIsSampled() bool {
 	return a.metricsStorage.IsSampled()
 }
 
-func (a *Agent) PingMetricsStorage(ctx context.Context) error {
+func (a *App) PingMetricsStorage(ctx context.Context) error {
 	return a.metricsStorage.Ping(ctx)
 }

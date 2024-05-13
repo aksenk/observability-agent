@@ -13,6 +13,13 @@ type Config struct {
 	Storage StorageConfig `env:", prefix=STORAGE_"`
 	Auth    AuthConfig    `env:", prefix=AUTH_"`
 	Log     LogConfig     `env:", prefix=LOG_"`
+	Redis   RedisConfig   `env:", prefix=REDIS_"`
+}
+
+type RedisConfig struct {
+	Addr     string `env:"ADDR, default=localhost:6379"`
+	Password string `env:"PASSWORD"`
+	DB       int    `env:"DB, default=0"`
 }
 
 type RateLimitConfig struct {
