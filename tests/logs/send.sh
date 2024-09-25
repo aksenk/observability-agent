@@ -12,7 +12,7 @@ APP_PORT=${APP_PORT_FROM_ARG:=8080}
 
 JWT="$(bash ../jwt_generator/generate.sh)"
 
-LOGS='It is first line
+LOGS='1It is first line
 It is second line
 {"custom_log": "third line"}'
 

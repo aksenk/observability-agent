@@ -1,0 +1,6 @@
+deploy
+tmp
+observability-agent
+tests
+Dockerfile
+.idea

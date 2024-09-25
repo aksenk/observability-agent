@@ -37,6 +37,7 @@ TODO list
 +\- timeouts (в эластике работает странно, фактический таймаут х4 от указанного)
 +\- logger (кривой какой-то)
 
+- request id
 - circuit breaker
 - prometheus metrics for storage requests
 - client metrics histogram support
